@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase, type Jogo } from "../lib/supabase";
+import { syncJogosFromSportsDB } from "../lib/sync-jogos.functions";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -93,6 +95,8 @@ function Painel({ onSair }: { onSair: () => void }) {
           <button onClick={onSair} className="text-xs underline text-muted-foreground">Sair</button>
         </div>
       </div>
+
+      <BotaoSync onSync={() => qc.invalidateQueries({ queryKey: ["jogos"] })} />
 
       <input
         value={filtro}
@@ -191,6 +195,44 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function BotaoSync({ onSync }: { onSync: () => void }) {
+  const syncFn = useServerFn(syncJogosFromSportsDB);
+  const mut = useMutation({
+    mutationFn: () => syncFn(),
+    onSuccess: () => onSync(),
+  });
+  return (
+    <div
+      className="mb-3 rounded-xl p-3 flex items-center justify-between gap-3 flex-wrap"
+      style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+    >
+      <div className="text-xs">
+        <div className="font-semibold">Sincronizar com TheSportsDB</div>
+        <div className="text-muted-foreground">
+          Importa jogos, horários, estádios e placares automaticamente (grátis).
+        </div>
+        {mut.data && (
+          <div className="text-green-400 mt-1">
+            ✓ {mut.data.inseridos} novos · {mut.data.atualizados} atualizados ({mut.data.total} eventos)
+          </div>
+        )}
+        {mut.error && (
+          <div className="text-destructive mt-1">
+            Erro: {mut.error instanceof Error ? mut.error.message : String(mut.error)}
+          </div>
+        )}
+      </div>
+      <button
+        onClick={() => mut.mutate()}
+        disabled={mut.isPending}
+        className="text-xs rounded-md px-3 py-2 bg-primary text-primary-foreground font-semibold disabled:opacity-50"
+      >
+        {mut.isPending ? "Sincronizando..." : "Sincronizar agora"}
+      </button>
     </div>
   );
 }
