@@ -16,6 +16,7 @@ function AdminPage() {
     () => typeof window !== "undefined" && localStorage.getItem("admin_ok") === "1",
   );
   const [senha, setSenha] = useState("");
+  const [mostrar, setMostrar] = useState(false);
   const [erro, setErro] = useState("");
 
   if (!autorizado) {
@@ -27,7 +28,7 @@ function AdminPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (senha === ADMIN_PASS) {
+            if (senha.trim().toLowerCase() === ADMIN_PASS.trim().toLowerCase()) {
               localStorage.setItem("admin_ok", "1");
               setAutorizado(true);
             } else setErro("Senha incorreta");
@@ -36,14 +37,25 @@ function AdminPage() {
           style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
         >
           <h1 className="text-xl font-bold">Admin</h1>
-          <input
-            type="password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            placeholder="Senha"
-            className="w-full rounded-lg px-3 py-2 bg-background/40 border border-white/10 outline-none"
-            autoFocus
-          />
+          <div className="relative">
+            <input
+              type={mostrar ? "text" : "password"}
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              placeholder="Senha"
+              className="w-full rounded-lg px-3 py-2 pr-10 bg-background/40 border border-white/10 outline-none"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setMostrar((v) => !v)}
+              aria-label={mostrar ? "Ocultar senha" : "Mostrar senha"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-lg"
+            >
+              {mostrar ? "🙈" : "👁️"}
+            </button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Dica: senha padrão é <code>copa2026</code></p>
           {erro && <p className="text-xs text-destructive">{erro}</p>}
           <button className="w-full rounded-lg py-2 bg-primary text-primary-foreground font-semibold">
             Entrar
