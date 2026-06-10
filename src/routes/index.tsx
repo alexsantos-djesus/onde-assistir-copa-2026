@@ -721,7 +721,31 @@ function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
   );
 }
 
+function Chip({
+  ativo,
+  onClick,
+  label,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+        ativo
+          ? "bg-primary text-primary-foreground shadow"
+          : "bg-card/60 text-foreground border border-white/10 hover:bg-card"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 function SkeletonList() {
+
   return (
     <>
       {[0, 1, 2].map((i) => (
