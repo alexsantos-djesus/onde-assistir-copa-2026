@@ -291,9 +291,9 @@ function HomePage() {
                 <Chip key={v} ativo={faseSel === v} onClick={() => setFaseSel(v)} label={lab} />
               ))}
             </div>
-
-            </div>
           </>
+        )}
+
         )}
       </header>
 
