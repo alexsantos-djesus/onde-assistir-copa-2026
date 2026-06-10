@@ -94,11 +94,37 @@ function montarGrupos(
       }
     }
     const tabela = [...mapa.values()].map((l) => ({ ...l, sg: l.gp - l.gc }));
+
+    // Confronto direto entre dois times empatados
+    const confrontoDireto = (x: LinhaTabela, y: LinhaTabela): number => {
+      let sx = 0, sy = 0;
+      for (const j of lista) {
+        if (
+          j.status !== "encerrado" ||
+          j.placar_mandante == null ||
+          j.placar_visitante == null
+        ) continue;
+        if (j.time_mandante === x.time && j.time_visitante === y.time) {
+          if (j.placar_mandante > j.placar_visitante) sx += 3;
+          else if (j.placar_mandante < j.placar_visitante) sy += 3;
+          else { sx++; sy++; }
+        } else if (j.time_mandante === y.time && j.time_visitante === x.time) {
+          if (j.placar_mandante > j.placar_visitante) sy += 3;
+          else if (j.placar_mandante < j.placar_visitante) sx += 3;
+          else { sx++; sy++; }
+        }
+      }
+      return sy - sx;
+    };
+
+    // Critérios FIFA: PTS → SG → GP → confronto direto → menos GC → nome
     tabela.sort(
       (x, y) =>
         y.pts - x.pts ||
         y.sg - x.sg ||
         y.gp - x.gp ||
+        confrontoDireto(x, y) ||
+        x.gc - y.gc ||
         x.time.localeCompare(y.time),
     );
     resultado[g] = {
@@ -115,6 +141,7 @@ function HomePage() {
   const [aba, setAba] = useState<Aba>("jogos");
   const [filtro, setFiltro] = useState<Filtro>("hoje");
   const [busca, setBusca] = useState("");
+  const [grupoSel, setGrupoSel] = useState<string | "todos">("todos");
   const [, tick] = useState(0);
 
   useEffect(() => {
@@ -260,9 +287,38 @@ function HomePage() {
                 Nenhum grupo cadastrado ainda.
               </div>
             )}
-            {letrasGrupos.map((g) => (
-              <GrupoCard key={g} letra={g} dados={grupos[g]} />
-            ))}
+            {letrasGrupos.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                <button
+                  onClick={() => setGrupoSel("todos")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+                    grupoSel === "todos"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card/60 text-foreground border border-white/10"
+                  }`}
+                >
+                  Todos
+                </button>
+                {letrasGrupos.map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGrupoSel(g)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+                      grupoSel === g
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card/60 text-foreground border border-white/10"
+                    }`}
+                  >
+                    Grupo {g}
+                  </button>
+                ))}
+              </div>
+            )}
+            {letrasGrupos
+              .filter((g) => grupoSel === "todos" || g === grupoSel)
+              .map((g) => (
+                <GrupoCard key={g} letra={g} dados={grupos[g]} />
+              ))}
           </>
         )}
       </main>
@@ -325,32 +381,83 @@ function GrupoCard({
         </table>
       </div>
 
-      <div className="mt-4 space-y-2">
-        {dados.jogos.map((j) => (
-          <Link
-            key={j.id}
-            to="/jogo/$id"
-            params={{ id: j.id }}
-            className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm border border-white/5 hover:bg-white/5 transition"
-          >
-            <span className="text-xs text-muted-foreground w-20 shrink-0">
-              {formatData(j.data_hora)}
-            </span>
-            <span className="flex-1 text-right truncate">
-              {flagEmoji(j.bandeira_mandante)} {j.time_mandante}
-            </span>
-            <span className="font-bold min-w-12 text-center">
-              {j.placar_mandante != null && j.placar_visitante != null
-                ? `${j.placar_mandante} × ${j.placar_visitante}`
-                : formatHora(j.data_hora)}
-            </span>
-            <span className="flex-1 truncate">
-              {j.time_visitante} {flagEmoji(j.bandeira_visitante)}
-            </span>
-          </Link>
-        ))}
+      <div className="mt-4 space-y-4">
+        {(() => {
+          const agora = Date.now();
+          const proximos = dados.jogos.filter(
+            (j) =>
+              j.status !== "encerrado" &&
+              (j.status === "ao_vivo" ||
+                new Date(j.data_hora).getTime() >= agora - 2 * 60 * 60 * 1000),
+          );
+          const ultimos = dados.jogos
+            .filter(
+              (j) =>
+                j.status === "encerrado" ||
+                new Date(j.data_hora).getTime() < agora - 2 * 60 * 60 * 1000,
+            )
+            .reverse();
+          return (
+            <>
+              {proximos.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    Próximos
+                  </h3>
+                  <div className="space-y-2">
+                    {proximos.map((j) => (
+                      <JogoLinhaGrupo key={j.id} jogo={j} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {ultimos.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    Últimos
+                  </h3>
+                  <div className="space-y-2">
+                    {ultimos.map((j) => (
+                      <JogoLinhaGrupo key={j.id} jogo={j} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </section>
+  );
+}
+
+function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
+  const aoVivo = j.status === "ao_vivo";
+  return (
+    <Link
+      to="/jogo/$id"
+      params={{ id: j.id }}
+      className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm border border-white/5 hover:bg-white/5 transition"
+    >
+      <span className="text-xs text-muted-foreground w-20 shrink-0">
+        {formatData(j.data_hora)}
+      </span>
+      <span className="flex-1 text-right truncate">
+        {flagEmoji(j.bandeira_mandante)} {j.time_mandante}
+      </span>
+      <span
+        className={`font-bold min-w-12 text-center ${
+          aoVivo ? "text-destructive" : ""
+        }`}
+      >
+        {j.placar_mandante != null && j.placar_visitante != null
+          ? `${j.placar_mandante} × ${j.placar_visitante}`
+          : formatHora(j.data_hora)}
+      </span>
+      <span className="flex-1 truncate">
+        {j.time_visitante} {flagEmoji(j.bandeira_visitante)}
+      </span>
+    </Link>
   );
 }
 
