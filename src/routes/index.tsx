@@ -397,7 +397,7 @@ function GrupoCard({
                 <td className="py-1.5 pr-2 text-muted-foreground">{i + 1}</td>
                 <td className="py-1.5 pr-2">
                   <span className="flex items-center gap-1.5">
-                    <span className="text-base">{flagEmoji(l.bandeira)}</span>
+                    <Bandeira code={l.bandeira} size={20} />
                     <span className="font-medium">{l.time}</span>
                   </span>
                 </td>
@@ -476,8 +476,9 @@ function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
       <span className="text-xs text-muted-foreground w-20 shrink-0">
         {formatData(j.data_hora)}
       </span>
-      <span className="flex-1 text-right truncate">
-        {flagEmoji(j.bandeira_mandante)} {j.time_mandante}
+      <span className="flex-1 flex items-center justify-end gap-1.5 truncate">
+        <span className="truncate">{j.time_mandante}</span>
+        <Bandeira code={j.bandeira_mandante} size={18} />
       </span>
       <span
         className={`font-bold min-w-12 text-center ${
@@ -488,9 +489,11 @@ function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
           ? `${j.placar_mandante} × ${j.placar_visitante}`
           : formatHora(j.data_hora)}
       </span>
-      <span className="flex-1 truncate">
-        {j.time_visitante} {flagEmoji(j.bandeira_visitante)}
+      <span className="flex-1 flex items-center gap-1.5 truncate">
+        <Bandeira code={j.bandeira_visitante} size={18} />
+        <span className="truncate">{j.time_visitante}</span>
       </span>
+
     </Link>
   );
 }
@@ -596,11 +599,8 @@ function Time({
         alinhar === "right" ? "flex-row-reverse text-right" : ""
       }`}
     >
-      {logo && /^https?:\/\//.test(logo) ? (
-        <img src={logo} alt={nome} className="w-10 h-10 object-contain" loading="lazy" />
-      ) : (
-        <div className="text-3xl leading-none">{flagEmoji(logo)}</div>
-      )}
+      <Bandeira code={logo} size={40} />
+
       <div className="font-semibold leading-tight">{nome}</div>
     </div>
   );
