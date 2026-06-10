@@ -250,10 +250,10 @@ function Time({
         alinhar === "right" ? "flex-row-reverse text-right" : ""
       }`}
     >
-      {logo ? (
+      {logo && /^https?:\/\//.test(logo) ? (
         <img src={logo} alt={nome} className="w-10 h-10 object-contain" loading="lazy" />
       ) : (
-        <div className="text-3xl leading-none">🏳️</div>
+        <div className="text-3xl leading-none">{flagEmoji(logo)}</div>
       )}
       <div className="font-semibold leading-tight">{nome}</div>
     </div>
