@@ -461,7 +461,7 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
       className={`overflow-auto -mx-4 px-4 pb-2 select-none ${
         arrastando ? "cursor-grabbing" : "cursor-grab"
       }`}
-      style={{ touchAction: "none", maxHeight: "70vh", overscrollBehavior: "contain" }}
+      style={{ touchAction: "none", overscrollBehavior: "contain" }}
     >
 
       <div className="flex gap-4 min-w-max">
