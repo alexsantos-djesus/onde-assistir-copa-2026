@@ -94,11 +94,37 @@ function montarGrupos(
       }
     }
     const tabela = [...mapa.values()].map((l) => ({ ...l, sg: l.gp - l.gc }));
+
+    // Confronto direto entre dois times empatados
+    const confrontoDireto = (x: LinhaTabela, y: LinhaTabela): number => {
+      let sx = 0, sy = 0;
+      for (const j of lista) {
+        if (
+          j.status !== "encerrado" ||
+          j.placar_mandante == null ||
+          j.placar_visitante == null
+        ) continue;
+        if (j.time_mandante === x.time && j.time_visitante === y.time) {
+          if (j.placar_mandante > j.placar_visitante) sx += 3;
+          else if (j.placar_mandante < j.placar_visitante) sy += 3;
+          else { sx++; sy++; }
+        } else if (j.time_mandante === y.time && j.time_visitante === x.time) {
+          if (j.placar_mandante > j.placar_visitante) sy += 3;
+          else if (j.placar_mandante < j.placar_visitante) sx += 3;
+          else { sx++; sy++; }
+        }
+      }
+      return sy - sx;
+    };
+
+    // Critérios FIFA: PTS → SG → GP → confronto direto → menos GC → nome
     tabela.sort(
       (x, y) =>
         y.pts - x.pts ||
         y.sg - x.sg ||
         y.gp - x.gp ||
+        confrontoDireto(x, y) ||
+        x.gc - y.gc ||
         x.time.localeCompare(y.time),
     );
     resultado[g] = {
