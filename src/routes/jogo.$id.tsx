@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { obterJogo, type Jogo } from "../lib/fixtures.functions";
+import { supabase, type Jogo } from "../lib/supabase";
 import { countdown, formatData, formatHora } from "../lib/format";
 
 export const Route = createFileRoute("/jogo/$id")({
