@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JogoIdRouteImport } from './routes/jogo.$id'
+import { Route as ApiPublicSyncJogosRouteImport } from './routes/api/public/sync-jogos'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
@@ -28,35 +29,44 @@ const JogoIdRoute = JogoIdRouteImport.update({
   path: '/jogo/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSyncJogosRoute = ApiPublicSyncJogosRouteImport.update({
+  id: '/api/public/sync-jogos',
+  path: '/api/public/sync-jogos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/jogo/$id': typeof JogoIdRoute
+  '/api/public/sync-jogos': typeof ApiPublicSyncJogosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/jogo/$id': typeof JogoIdRoute
+  '/api/public/sync-jogos': typeof ApiPublicSyncJogosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/jogo/$id': typeof JogoIdRoute
+  '/api/public/sync-jogos': typeof ApiPublicSyncJogosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/jogo/$id'
+  fullPaths: '/' | '/admin' | '/jogo/$id' | '/api/public/sync-jogos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/jogo/$id'
-  id: '__root__' | '/' | '/admin' | '/jogo/$id'
+  to: '/' | '/admin' | '/jogo/$id' | '/api/public/sync-jogos'
+  id: '__root__' | '/' | '/admin' | '/jogo/$id' | '/api/public/sync-jogos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   JogoIdRoute: typeof JogoIdRoute
+  ApiPublicSyncJogosRoute: typeof ApiPublicSyncJogosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JogoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/sync-jogos': {
+      id: '/api/public/sync-jogos'
+      path: '/api/public/sync-jogos'
+      fullPath: '/api/public/sync-jogos'
+      preLoaderRoute: typeof ApiPublicSyncJogosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,7 +106,18 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   JogoIdRoute: JogoIdRoute,
+  ApiPublicSyncJogosRoute: ApiPublicSyncJogosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
