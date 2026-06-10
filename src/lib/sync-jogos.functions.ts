@@ -50,15 +50,16 @@ function mapFase(round: string | null): string | null {
 
 export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
   async () => {
-    const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const SUPABASE_URL =
+      process.env.SUPABASE_URL ||
+      process.env.VITE_SUPABASE_URL ||
+      "https://qbolkhzcbbcufxvxpjla.supabase.co";
     const KEY =
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
       process.env.SUPABASE_PUBLISHABLE_KEY ||
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-      process.env.VITE_SUPABASE_ANON_KEY;
-    if (!SUPABASE_URL || !KEY) {
-      throw new Error("Supabase env vars não configuradas no servidor");
-    }
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFib2xraHpjYmJjdWZ4dnhwamxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwODA5OTUsImV4cCI6MjA5NjY1Njk5NX0.eRPeB9QIQ9aN_qG3Uq4NNdVUsK8aPgoPO-f4JPOhskc";
     const supabase = createClient(SUPABASE_URL, KEY);
 
     const res = await fetch(SPORTSDB_URL);
