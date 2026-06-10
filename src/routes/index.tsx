@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase, type Jogo } from "../lib/supabase";
 import { countdown, formatData, formatHora } from "../lib/format";
 import { Bandeira } from "../components/Bandeira";
@@ -378,8 +378,50 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
     );
   }
 
+  const ref = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ x: number; left: number; moved: boolean } | null>(null);
+  const [arrastando, setArrastando] = useState(false);
+
+  const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    drag.current = { x: e.clientX, left: el.scrollLeft, moved: false };
+    setArrastando(true);
+  };
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el || !drag.current) return;
+    const dx = e.clientX - drag.current.x;
+    if (Math.abs(dx) > 4) drag.current.moved = true;
+    el.scrollLeft = drag.current.left - dx;
+  };
+  const onUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    drag.current = null;
+    setArrastando(false);
+  };
+
   return (
-    <div className="overflow-x-auto -mx-4 px-4 pb-2">
+    <div
+      ref={ref}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerLeave={onUp}
+      onClickCapture={(e) => {
+        if (drag.current?.moved) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      className={`overflow-x-auto -mx-4 px-4 pb-2 select-none ${
+        arrastando ? "cursor-grabbing" : "cursor-grab"
+      }`}
+      style={{ touchAction: "pan-y" }}
+    >
       <div className="flex gap-4 min-w-max">
         {porFase.map((fase) => (
           <div key={fase.key} className="flex flex-col gap-3 w-64 shrink-0">
@@ -405,6 +447,7 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
     </div>
   );
 }
+
 
 function BracketCard({ jogo: j }: { jogo: Jogo }) {
   const aoVivo = j.status === "ao_vivo";
