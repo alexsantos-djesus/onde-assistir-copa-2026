@@ -293,9 +293,8 @@ function HomePage() {
             </div>
           </>
         )}
-
-        )}
       </header>
+
 
       <main className="px-4 pb-24 max-w-3xl mx-auto space-y-3">
         {isLoading && <SkeletonList />}
