@@ -112,6 +112,7 @@ function montarGrupos(
 }
 
 function HomePage() {
+  const [aba, setAba] = useState<Aba>("jogos");
   const [filtro, setFiltro] = useState<Filtro>("hoje");
   const [busca, setBusca] = useState("");
   const [, tick] = useState(0);
@@ -142,6 +143,8 @@ function HomePage() {
     );
   });
   const visiveis = filtrar(jogos, filtro);
+  const grupos = montarGrupos(jogos);
+  const letrasGrupos = Object.keys(grupos).sort();
 
   return (
     <div
@@ -159,40 +162,60 @@ function HomePage() {
           </div>
         </div>
 
-        <input
-          type="search"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar seleção..."
-          className="mt-5 w-full rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary"
-          style={{
-            background: "var(--glass-bg)",
-            border: "1px solid var(--glass-border)",
-            backdropFilter: "blur(8px)",
-          }}
-        />
-
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-          {(["hoje", "amanha", "semana", "todos"] as Filtro[]).map((f) => (
+        <div
+          className="mt-5 grid grid-cols-2 rounded-xl p-1 text-sm font-medium"
+          style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+        >
+          {(["jogos", "grupos"] as Aba[]).map((a) => (
             <button
-              key={f}
-              onClick={() => setFiltro(f)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
-                filtro === f
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card/60 text-foreground border border-white/10"
+              key={a}
+              onClick={() => setAba(a)}
+              className={`py-2 rounded-lg transition ${
+                aba === a ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               }`}
             >
-              {f === "hoje"
-                ? "Hoje"
-                : f === "amanha"
-                  ? "Amanhã"
-                  : f === "semana"
-                    ? "Semana"
-                    : "Todos"}
+              {a === "jogos" ? "Jogos" : "Grupos"}
             </button>
           ))}
         </div>
+
+        {aba === "jogos" && (
+          <>
+            <input
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar seleção..."
+              className="mt-4 w-full rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary"
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                backdropFilter: "blur(8px)",
+              }}
+            />
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {(["hoje", "amanha", "semana", "todos"] as Filtro[]).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFiltro(f)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
+                    filtro === f
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card/60 text-foreground border border-white/10"
+                  }`}
+                >
+                  {f === "hoje"
+                    ? "Hoje"
+                    : f === "amanha"
+                      ? "Amanhã"
+                      : f === "semana"
+                        ? "Semana"
+                        : "Todos"}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </header>
 
       <main className="px-4 pb-24 max-w-3xl mx-auto space-y-3">
@@ -202,24 +225,132 @@ function HomePage() {
             Erro ao carregar jogos: {(error as Error).message}
           </div>
         )}
-        {!isLoading && !error && visiveis.length === 0 && (
-          <div
-            className="rounded-2xl p-8 text-center text-muted-foreground"
-            style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
-            }}
-          >
-            {data && data.length === 0
-              ? "Nenhum jogo disponível ainda."
-              : "Nenhum jogo nesse filtro."}
-          </div>
+
+        {!isLoading && !error && aba === "jogos" && (
+          <>
+            {visiveis.length === 0 && (
+              <div
+                className="rounded-2xl p-8 text-center text-muted-foreground"
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                }}
+              >
+                {data && data.length === 0
+                  ? "Nenhum jogo disponível ainda."
+                  : "Nenhum jogo nesse filtro."}
+              </div>
+            )}
+            {visiveis.map((j) => (
+              <JogoCard key={j.id} jogo={j} />
+            ))}
+          </>
         )}
-        {visiveis.map((j) => (
-          <JogoCard key={j.id} jogo={j} />
-        ))}
+
+        {!isLoading && !error && aba === "grupos" && (
+          <>
+            {letrasGrupos.length === 0 && (
+              <div
+                className="rounded-2xl p-8 text-center text-muted-foreground"
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                }}
+              >
+                Nenhum grupo cadastrado ainda.
+              </div>
+            )}
+            {letrasGrupos.map((g) => (
+              <GrupoCard key={g} letra={g} dados={grupos[g]} />
+            ))}
+          </>
+        )}
       </main>
     </div>
+  );
+}
+
+function GrupoCard({
+  letra,
+  dados,
+}: {
+  letra: string;
+  dados: { jogos: Jogo[]; tabela: LinhaTabela[] };
+}) {
+  return (
+    <section
+      className="rounded-2xl p-4"
+      style={{
+        background: "var(--glass-bg)",
+        border: "1px solid var(--glass-border)",
+        backdropFilter: "blur(8px)",
+      }}
+    >
+      <h2 className="text-lg font-bold mb-3">Grupo {letra}</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-muted-foreground text-xs">
+            <tr className="text-left">
+              <th className="py-1 pr-2">#</th>
+              <th className="py-1 pr-2">Seleção</th>
+              <th className="py-1 px-1 text-center">PJ</th>
+              <th className="py-1 px-1 text-center">V</th>
+              <th className="py-1 px-1 text-center">E</th>
+              <th className="py-1 px-1 text-center">D</th>
+              <th className="py-1 px-1 text-center">SG</th>
+              <th className="py-1 pl-1 text-center font-semibold">PTS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dados.tabela.map((l, i) => (
+              <tr key={l.time} className="border-t border-white/5">
+                <td className="py-1.5 pr-2 text-muted-foreground">{i + 1}</td>
+                <td className="py-1.5 pr-2">
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-base">{flagEmoji(l.bandeira)}</span>
+                    <span className="font-medium">{l.time}</span>
+                  </span>
+                </td>
+                <td className="py-1.5 px-1 text-center">{l.pj}</td>
+                <td className="py-1.5 px-1 text-center">{l.v}</td>
+                <td className="py-1.5 px-1 text-center">{l.e}</td>
+                <td className="py-1.5 px-1 text-center">{l.d}</td>
+                <td className="py-1.5 px-1 text-center">
+                  {l.sg > 0 ? `+${l.sg}` : l.sg}
+                </td>
+                <td className="py-1.5 pl-1 text-center font-bold">{l.pts}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {dados.jogos.map((j) => (
+          <Link
+            key={j.id}
+            to="/jogo/$id"
+            params={{ id: j.id }}
+            className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm border border-white/5 hover:bg-white/5 transition"
+          >
+            <span className="text-xs text-muted-foreground w-20 shrink-0">
+              {formatData(j.data_hora)}
+            </span>
+            <span className="flex-1 text-right truncate">
+              {flagEmoji(j.bandeira_mandante)} {j.time_mandante}
+            </span>
+            <span className="font-bold min-w-12 text-center">
+              {j.placar_mandante != null && j.placar_visitante != null
+                ? `${j.placar_mandante} × ${j.placar_visitante}`
+                : formatHora(j.data_hora)}
+            </span>
+            <span className="flex-1 truncate">
+              {j.time_visitante} {flagEmoji(j.bandeira_visitante)}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 
