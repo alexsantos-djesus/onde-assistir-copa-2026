@@ -170,7 +170,10 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
         <span>{jogo.estadio ?? ""}</span>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="flex-1 min-w-[80px] truncate font-medium">{jogo.time_mandante}</span>
+        <div className="flex-1 min-w-[100px] flex items-center gap-2">
+          <Bandeira code={jogo.bandeira_mandante ?? jogo.time_mandante} size={22} />
+          <span className="truncate font-medium">{jogo.time_mandante}</span>
+        </div>
         <input
           type="number"
           value={pm}
@@ -184,7 +187,10 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
           onChange={(e) => setPv(e.target.value)}
           className="w-14 text-center rounded-md bg-background/40 border border-white/10 py-1"
         />
-        <span className="flex-1 min-w-[80px] truncate font-medium text-right">{jogo.time_visitante}</span>
+        <div className="flex-1 min-w-[100px] flex items-center gap-2 justify-end">
+          <span className="truncate font-medium text-right">{jogo.time_visitante}</span>
+          <Bandeira code={jogo.bandeira_visitante ?? jogo.time_visitante} size={22} />
+        </div>
       </div>
       <div className="flex items-center justify-between mt-2 gap-2">
         <select
