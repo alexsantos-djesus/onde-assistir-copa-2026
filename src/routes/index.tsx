@@ -141,6 +141,7 @@ function HomePage() {
   const [aba, setAba] = useState<Aba>("jogos");
   const [filtro, setFiltro] = useState<Filtro>("hoje");
   const [busca, setBusca] = useState("");
+  const [grupoSel, setGrupoSel] = useState<string | "todos">("todos");
   const [, tick] = useState(0);
 
   useEffect(() => {
