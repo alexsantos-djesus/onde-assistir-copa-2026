@@ -2,7 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase, type Jogo } from "../lib/supabase";
-import { countdown, flagEmoji, formatData, formatHora } from "../lib/format";
+import { countdown, formatData, formatHora } from "../lib/format";
+import { Bandeira } from "../components/Bandeira";
+
+function normalizar(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,7 +27,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Filtro = "todos" | "hoje" | "amanha" | "semana";
-type Aba = "jogos" | "grupos";
+type Aba = "jogos" | "grupos" | "mata";
 
 function filtrar(jogos: Jogo[], f: Filtro): Jogo[] {
   if (f === "todos") return jogos;
