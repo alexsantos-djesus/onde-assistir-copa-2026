@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase, type Jogo } from "../lib/supabase";
-import { countdown, formatData, formatHora } from "../lib/format";
+import { countdown, flagEmoji, formatData, formatHora } from "../lib/format";
 
 export const Route = createFileRoute("/jogo/$id")({
   component: JogoPage,
@@ -144,10 +144,10 @@ function JogoPage() {
 function TimeBig({ nome, logo }: { nome: string; logo: string | null }) {
   return (
     <div className="flex-1">
-      {logo ? (
+      {logo && /^https?:\/\//.test(logo) ? (
         <img src={logo} alt={nome} className="w-20 h-20 mx-auto object-contain" />
       ) : (
-        <div className="text-6xl">🏳️</div>
+        <div className="text-6xl">{flagEmoji(logo)}</div>
       )}
       <div className="mt-2 font-bold">{nome}</div>
     </div>
