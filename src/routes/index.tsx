@@ -49,8 +49,14 @@ function HomePage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["jogos"],
-    queryFn: () => listarJogos(),
-    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("jogos")
+        .select("*")
+        .order("data_hora", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Jogo[];
+    },
   });
 
   const jogos = (data ?? []).filter((j) => {

@@ -29,9 +29,14 @@ function JogoPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["jogo", id],
     queryFn: async () => {
-      const j = await obterJogo({ data: { id } });
-      if (!j) throw notFound();
-      return j as Jogo;
+      const { data, error } = await supabase
+        .from("jogos")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw notFound();
+      return data as Jogo;
     },
   });
 
