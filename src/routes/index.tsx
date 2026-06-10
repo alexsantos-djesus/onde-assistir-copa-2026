@@ -172,11 +172,18 @@ function HomePage() {
 
   const jogos = (data ?? []).filter((j) => {
     if (!busca.trim()) return true;
-    const q = busca.toLowerCase();
-    return (
-      j.time_mandante.toLowerCase().includes(q) ||
-      j.time_visitante.toLowerCase().includes(q)
-    );
+    const q = normalizar(busca);
+    const campos = [
+      j.time_mandante,
+      j.time_visitante,
+      j.bandeira_mandante ?? "",
+      j.bandeira_visitante ?? "",
+      j.fase ?? "",
+      j.estadio ?? "",
+      j.cidade ?? "",
+      j.canal_tv ?? "",
+    ];
+    return campos.some((c) => normalizar(c).includes(q));
   });
   const visiveis = filtrar(jogos, filtro);
   const grupos = montarGrupos(jogos);
@@ -199,10 +206,10 @@ function HomePage() {
         </div>
 
         <div
-          className="mt-5 grid grid-cols-2 rounded-xl p-1 text-sm font-medium"
+          className="mt-5 grid grid-cols-3 rounded-xl p-1 text-sm font-medium"
           style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
         >
-          {(["jogos", "grupos"] as Aba[]).map((a) => (
+          {(["jogos", "grupos", "mata"] as Aba[]).map((a) => (
             <button
               key={a}
               onClick={() => setAba(a)}
@@ -210,10 +217,11 @@ function HomePage() {
                 aba === a ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               }`}
             >
-              {a === "jogos" ? "Jogos" : "Grupos"}
+              {a === "jogos" ? "Jogos" : a === "grupos" ? "Grupos" : "Mata-mata"}
             </button>
           ))}
         </div>
+
 
         {aba === "jogos" && (
           <>
@@ -221,7 +229,7 @@ function HomePage() {
               type="search"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar seleção..."
+              placeholder="Buscar por seleção, fase, estádio, canal..."
               className="mt-4 w-full rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary"
               style={{
                 background: "var(--glass-bg)",
@@ -229,6 +237,7 @@ function HomePage() {
                 backdropFilter: "blur(8px)",
               }}
             />
+
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {(["hoje", "amanha", "semana", "todos"] as Filtro[]).map((f) => (
                 <button
