@@ -483,8 +483,9 @@ function Linha({
   );
 }
 
-
+function Rodape({ jogos }: { jogos: Jogo[] }) {
   const ultima = jogos
+
     .map((j) => j.updated_at)
     .filter((d): d is string => !!d)
     .sort()
