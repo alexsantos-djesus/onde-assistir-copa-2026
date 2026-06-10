@@ -18,6 +18,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Filtro = "todos" | "hoje" | "amanha" | "semana";
+type Aba = "jogos" | "grupos";
 
 function filtrar(jogos: Jogo[], f: Filtro): Jogo[] {
   if (f === "todos") return jogos;
@@ -35,6 +36,79 @@ function filtrar(jogos: Jogo[], f: Filtro): Jogo[] {
     const t = new Date(j.data_hora).getTime();
     return t >= start.getTime() && t < end.getTime();
   });
+}
+
+type LinhaTabela = {
+  time: string;
+  bandeira: string | null;
+  pj: number;
+  v: number;
+  e: number;
+  d: number;
+  gp: number;
+  gc: number;
+  sg: number;
+  pts: number;
+};
+
+function extrairGrupo(fase: string | null): string | null {
+  if (!fase) return null;
+  const m = fase.match(/grupo\s*([a-l])/i);
+  return m ? m[1].toUpperCase() : null;
+}
+
+function montarGrupos(
+  jogos: Jogo[],
+): Record<string, { jogos: Jogo[]; tabela: LinhaTabela[] }> {
+  const grupos: Record<string, Jogo[]> = {};
+  for (const j of jogos) {
+    const g = extrairGrupo(j.fase);
+    if (!g) continue;
+    (grupos[g] ??= []).push(j);
+  }
+  const resultado: Record<string, { jogos: Jogo[]; tabela: LinhaTabela[] }> = {};
+  for (const [g, lista] of Object.entries(grupos)) {
+    const mapa = new Map<string, LinhaTabela>();
+    const ensure = (nome: string, bandeira: string | null) => {
+      let l = mapa.get(nome);
+      if (!l) {
+        l = { time: nome, bandeira, pj: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, sg: 0, pts: 0 };
+        mapa.set(nome, l);
+      } else if (!l.bandeira && bandeira) l.bandeira = bandeira;
+      return l;
+    };
+    for (const j of lista) {
+      const a = ensure(j.time_mandante, j.bandeira_mandante);
+      const b = ensure(j.time_visitante, j.bandeira_visitante);
+      if (
+        j.status === "encerrado" &&
+        j.placar_mandante != null &&
+        j.placar_visitante != null
+      ) {
+        a.pj++; b.pj++;
+        a.gp += j.placar_mandante; a.gc += j.placar_visitante;
+        b.gp += j.placar_visitante; b.gc += j.placar_mandante;
+        if (j.placar_mandante > j.placar_visitante) { a.v++; a.pts += 3; b.d++; }
+        else if (j.placar_mandante < j.placar_visitante) { b.v++; b.pts += 3; a.d++; }
+        else { a.e++; b.e++; a.pts++; b.pts++; }
+      }
+    }
+    const tabela = [...mapa.values()].map((l) => ({ ...l, sg: l.gp - l.gc }));
+    tabela.sort(
+      (x, y) =>
+        y.pts - x.pts ||
+        y.sg - x.sg ||
+        y.gp - x.gp ||
+        x.time.localeCompare(y.time),
+    );
+    resultado[g] = {
+      jogos: lista.sort(
+        (x, y) => new Date(x.data_hora).getTime() - new Date(y.data_hora).getTime(),
+      ),
+      tabela,
+    };
+  }
+  return resultado;
 }
 
 function HomePage() {
