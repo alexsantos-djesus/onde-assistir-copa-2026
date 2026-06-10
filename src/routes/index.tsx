@@ -1,16 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { supabase, type Jogo } from "../lib/supabase";
-import { countdown, flagEmoji, formatData, formatHora } from "../lib/format";
+import { listarJogos, type Jogo } from "../lib/fixtures.functions";
+import { countdown, formatData, formatHora } from "../lib/format";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Onde Assistir a Copa — Jogos de hoje" },
+      { title: "Onde Assistir a Copa do Mundo 2026" },
       {
         name: "description",
-        content: "Horários, canais de TV, streaming e estádios dos jogos da Copa.",
+        content: "Horários, canais, estádios e placar ao vivo da Copa do Mundo 2026.",
       },
     ],
   }),
@@ -49,14 +49,8 @@ function HomePage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["jogos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("jogos")
-        .select("*")
-        .order("data_hora", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Jogo[];
-    },
+    queryFn: () => listarJogos(),
+    staleTime: 5 * 60_000,
   });
 
   const jogos = (data ?? []).filter((j) => {
@@ -80,7 +74,7 @@ function HomePage() {
           <div>
             <h1 className="text-2xl font-bold leading-tight">Onde Assistir a Copa</h1>
             <p className="text-sm text-muted-foreground">
-              Horário, TV, streaming e estádio.
+              Copa do Mundo 2026 · horários, estádios e placar.
             </p>
           </div>
         </div>
@@ -89,7 +83,7 @@ function HomePage() {
           type="search"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar time..."
+          placeholder="Buscar seleção..."
           className="mt-5 w-full rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary"
           style={{
             background: "var(--glass-bg)",
@@ -137,7 +131,7 @@ function HomePage() {
             }}
           >
             {data && data.length === 0
-              ? "Nenhum jogo cadastrado ainda."
+              ? "Nenhum jogo disponível ainda."
               : "Nenhum jogo nesse filtro."}
           </div>
         )}
@@ -206,7 +200,7 @@ function JogoCard({ jogo }: { jogo: Jogo }) {
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <Time nome={jogo.time_mandante} bandeira={jogo.bandeira_mandante} />
+        <Time nome={jogo.time_mandante} logo={jogo.bandeira_mandante} />
         <div className="text-center min-w-16">
           {jogo.placar_mandante != null && jogo.placar_visitante != null ? (
             <div className="text-2xl font-bold">
@@ -222,21 +216,13 @@ function JogoCard({ jogo }: { jogo: Jogo }) {
             </div>
           )}
         </div>
-        <Time nome={jogo.time_visitante} bandeira={jogo.bandeira_visitante} alinhar="right" />
+        <Time nome={jogo.time_visitante} logo={jogo.bandeira_visitante} alinhar="right" />
       </div>
 
-      {(jogo.canal_tv || jogo.streaming) && (
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          {jogo.canal_tv && (
-            <span className="px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
-              📺 {jogo.canal_tv}
-            </span>
-          )}
-          {jogo.streaming && (
-            <span className="px-2 py-1 rounded-full bg-accent/20 text-accent">
-              ▶ {jogo.streaming}
-            </span>
-          )}
+      {jogo.estadio && (
+        <div className="mt-3 text-xs text-muted-foreground">
+          🏟 {jogo.estadio}
+          {jogo.cidade ? ` · ${jogo.cidade}` : ""}
         </div>
       )}
     </Link>
@@ -245,11 +231,11 @@ function JogoCard({ jogo }: { jogo: Jogo }) {
 
 function Time({
   nome,
-  bandeira,
+  logo,
   alinhar = "left",
 }: {
   nome: string;
-  bandeira: string | null;
+  logo: string | null;
   alinhar?: "left" | "right";
 }) {
   return (
@@ -258,7 +244,11 @@ function Time({
         alinhar === "right" ? "flex-row-reverse text-right" : ""
       }`}
     >
-      <div className="text-3xl leading-none">{flagEmoji(bandeira)}</div>
+      {logo ? (
+        <img src={logo} alt={nome} className="w-10 h-10 object-contain" loading="lazy" />
+      ) : (
+        <div className="text-3xl leading-none">🏳️</div>
+      )}
       <div className="font-semibold leading-tight">{nome}</div>
     </div>
   );
