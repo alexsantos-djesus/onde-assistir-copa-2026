@@ -23,4 +23,6 @@ export type Jogo = {
   status: string | null; // agendado | ao_vivo | encerrado
   placar_mandante: number | null;
   placar_visitante: number | null;
+  updated_at?: string | null;
 };
+

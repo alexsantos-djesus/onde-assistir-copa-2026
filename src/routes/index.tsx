@@ -321,10 +321,35 @@ function HomePage() {
               ))}
           </>
         )}
+
+        <Rodape jogos={jogos} />
       </main>
     </div>
   );
 }
+
+function Rodape({ jogos }: { jogos: Jogo[] }) {
+  const ultima = jogos
+    .map((j) => j.updated_at)
+    .filter((d): d is string => !!d)
+    .sort()
+    .pop();
+  if (!ultima) return null;
+  const d = new Date(ultima);
+  const fmt = d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return (
+    <p className="text-center text-xs text-muted-foreground mt-8 pb-4">
+      Calendário atualizado em {fmt}
+    </p>
+  );
+}
+
 
 function GrupoCard({
   letra,
