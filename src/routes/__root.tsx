@@ -96,8 +96,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Your guide to watching the Copa, showing game times, channels, and streaming options." },
       { property: "og:description", content: "Your guide to watching the Copa, showing game times, channels, and streaming options." },
       { name: "twitter:description", content: "Your guide to watching the Copa, showing game times, channels, and streaming options." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1c8cffe2-8f5d-4591-9db4-6c25b169fbb3/id-preview-e1612a27--d8cd037c-abb6-4089-a10c-5881e139060a.lovable.app-1781109522095.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1c8cffe2-8f5d-4591-9db4-6c25b169fbb3/id-preview-e1612a27--d8cd037c-abb6-4089-a10c-5881e139060a.lovable.app-1781109522095.png" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0a285511-c5fd-445f-a66d-ae885002f56a" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0a285511-c5fd-445f-a66d-ae885002f56a" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
