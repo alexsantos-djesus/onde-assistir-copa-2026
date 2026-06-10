@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase, type Jogo } from "../lib/supabase";
+import { syncJogosFromSportsDB } from "../lib/sync-jogos.functions";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -93,6 +95,8 @@ function Painel({ onSair }: { onSair: () => void }) {
           <button onClick={onSair} className="text-xs underline text-muted-foreground">Sair</button>
         </div>
       </div>
+
+      <BotaoSync onSync={() => qc.invalidateQueries({ queryKey: ["jogos"] })} />
 
       <input
         value={filtro}
