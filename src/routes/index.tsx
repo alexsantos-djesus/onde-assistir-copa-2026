@@ -340,6 +340,10 @@ function HomePage() {
           </>
         )}
 
+        {!isLoading && !error && aba === "mata" && <MataMata jogos={jogos} />}
+
+
+
         <Rodape jogos={jogos} />
       </main>
     </div>
