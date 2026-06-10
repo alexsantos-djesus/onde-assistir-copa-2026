@@ -1,29 +1,265 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { supabase, type Jogo } from "../lib/supabase";
+import { countdown, flagEmoji, formatData, formatHora } from "../lib/format";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "Onde Assistir a Copa — Jogos de hoje" },
+      {
+        name: "description",
+        content: "Horários, canais de TV, streaming e estádios dos jogos da Copa.",
+      },
     ],
   }),
-  component: Index,
+  component: HomePage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+type Filtro = "todos" | "hoje" | "amanha" | "semana";
+
+function filtrar(jogos: Jogo[], f: Filtro): Jogo[] {
+  if (f === "todos") return jogos;
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  let end = new Date(start);
+  if (f === "hoje") end.setDate(end.getDate() + 1);
+  else if (f === "amanha") {
+    start.setDate(start.getDate() + 1);
+    end = new Date(start);
+    end.setDate(end.getDate() + 1);
+  } else if (f === "semana") end.setDate(end.getDate() + 7);
+  return jogos.filter((j) => {
+    const t = new Date(j.data_hora).getTime();
+    return t >= start.getTime() && t < end.getTime();
+  });
+}
+
+function HomePage() {
+  const [filtro, setFiltro] = useState<Filtro>("hoje");
+  const [busca, setBusca] = useState("");
+  const [, tick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["jogos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("jogos")
+        .select("*")
+        .order("data_hora", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Jogo[];
+    },
+  });
+
+  const jogos = (data ?? []).filter((j) => {
+    if (!busca.trim()) return true;
+    const q = busca.toLowerCase();
+    return (
+      j.time_mandante.toLowerCase().includes(q) ||
+      j.time_visitante.toLowerCase().includes(q)
+    );
+  });
+  const visiveis = filtrar(jogos, filtro);
+
   return (
     <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
+      className="min-h-screen text-foreground"
+      style={{ background: "var(--gradient-pitch)" }}
     >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+      <header className="px-4 pt-8 pb-4 max-w-3xl mx-auto">
+        <div className="flex items-center gap-3">
+          <div className="text-3xl">⚽</div>
+          <div>
+            <h1 className="text-2xl font-bold leading-tight">Onde Assistir a Copa</h1>
+            <p className="text-sm text-muted-foreground">
+              Horário, TV, streaming e estádio.
+            </p>
+          </div>
+        </div>
+
+        <input
+          type="search"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar time..."
+          className="mt-5 w-full rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+            backdropFilter: "blur(8px)",
+          }}
+        />
+
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {(["hoje", "amanha", "semana", "todos"] as Filtro[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFiltro(f)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
+                filtro === f
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card/60 text-foreground border border-white/10"
+              }`}
+            >
+              {f === "hoje"
+                ? "Hoje"
+                : f === "amanha"
+                  ? "Amanhã"
+                  : f === "semana"
+                    ? "Semana"
+                    : "Todos"}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <main className="px-4 pb-24 max-w-3xl mx-auto space-y-3">
+        {isLoading && <SkeletonList />}
+        {error && (
+          <div className="rounded-xl p-4 bg-destructive/20 text-sm">
+            Erro ao carregar jogos: {(error as Error).message}
+          </div>
+        )}
+        {!isLoading && !error && visiveis.length === 0 && (
+          <div
+            className="rounded-2xl p-8 text-center text-muted-foreground"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            {data && data.length === 0
+              ? "Nenhum jogo cadastrado ainda."
+              : "Nenhum jogo nesse filtro."}
+          </div>
+        )}
+        {visiveis.map((j) => (
+          <JogoCard key={j.id} jogo={j} />
+        ))}
+      </main>
+    </div>
+  );
+}
+
+function SkeletonList() {
+  return (
+    <>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="h-28 rounded-2xl animate-pulse"
+          style={{ background: "var(--glass-bg)" }}
+        />
+      ))}
+    </>
+  );
+}
+
+function StatusBadge({ status }: { status: string | null }) {
+  if (status === "ao_vivo")
+    return (
+      <span className="text-xs px-2 py-1 rounded-full bg-destructive text-destructive-foreground font-semibold flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+        AO VIVO
+      </span>
+    );
+  if (status === "encerrado")
+    return (
+      <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium">
+        Encerrado
+      </span>
+    );
+  return null;
+}
+
+function JogoCard({ jogo }: { jogo: Jogo }) {
+  const ended = jogo.status === "encerrado";
+  return (
+    <Link
+      to="/jogo/$id"
+      params={{ id: jogo.id }}
+      className="block rounded-2xl p-4 transition hover:scale-[1.01] active:scale-[0.99]"
+      style={{
+        background: "var(--glass-bg)",
+        border: "1px solid var(--glass-border)",
+        backdropFilter: "blur(8px)",
+      }}
+    >
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          {formatData(jogo.data_hora)} · {formatHora(jogo.data_hora)}
+        </span>
+        <div className="flex items-center gap-2">
+          <StatusBadge status={jogo.status} />
+          {!ended && jogo.status !== "ao_vivo" && (
+            <span className="text-primary font-medium">{countdown(jogo.data_hora)}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <Time nome={jogo.time_mandante} bandeira={jogo.bandeira_mandante} />
+        <div className="text-center min-w-16">
+          {jogo.placar_mandante != null && jogo.placar_visitante != null ? (
+            <div className="text-2xl font-bold">
+              {jogo.placar_mandante} <span className="text-muted-foreground">×</span>{" "}
+              {jogo.placar_visitante}
+            </div>
+          ) : (
+            <div className="text-lg font-bold text-muted-foreground">×</div>
+          )}
+          {jogo.fase && (
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">
+              {jogo.fase}
+            </div>
+          )}
+        </div>
+        <Time nome={jogo.time_visitante} bandeira={jogo.bandeira_visitante} alinhar="right" />
+      </div>
+
+      {(jogo.canal_tv || jogo.streaming) && (
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {jogo.canal_tv && (
+            <span className="px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
+              📺 {jogo.canal_tv}
+            </span>
+          )}
+          {jogo.streaming && (
+            <span className="px-2 py-1 rounded-full bg-accent/20 text-accent">
+              ▶ {jogo.streaming}
+            </span>
+          )}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function Time({
+  nome,
+  bandeira,
+  alinhar = "left",
+}: {
+  nome: string;
+  bandeira: string | null;
+  alinhar?: "left" | "right";
+}) {
+  return (
+    <div
+      className={`flex-1 flex items-center gap-2 ${
+        alinhar === "right" ? "flex-row-reverse text-right" : ""
+      }`}
+    >
+      <div className="text-3xl leading-none">{flagEmoji(bandeira)}</div>
+      <div className="font-semibold leading-tight">{nome}</div>
     </div>
   );
 }
