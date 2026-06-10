@@ -1,8 +1,8 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { supabase, type Jogo } from "../lib/supabase";
-import { countdown, flagEmoji, formatData, formatHora } from "../lib/format";
+import { obterJogo, type Jogo } from "../lib/fixtures.functions";
+import { countdown, formatData, formatHora } from "../lib/format";
 
 export const Route = createFileRoute("/jogo/$id")({
   component: JogoPage,
@@ -29,14 +29,9 @@ function JogoPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["jogo", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("jogos")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) throw notFound();
-      return data as Jogo;
+      const j = await obterJogo({ data: { id } });
+      if (!j) throw notFound();
+      return j as Jogo;
     },
   });
 
@@ -106,10 +101,7 @@ function JogoPage() {
           )}
 
           <div className="mt-6 flex items-center justify-around gap-3">
-            <div className="flex-1">
-              <div className="text-6xl">{flagEmoji(j.bandeira_mandante)}</div>
-              <div className="mt-2 font-bold">{j.time_mandante}</div>
-            </div>
+            <TimeBig nome={j.time_mandante} logo={j.bandeira_mandante} />
             <div className="text-center">
               {j.placar_mandante != null && j.placar_visitante != null ? (
                 <div className="text-4xl font-bold">
@@ -121,16 +113,11 @@ function JogoPage() {
                 <div className="text-3xl text-muted-foreground">×</div>
               )}
             </div>
-            <div className="flex-1">
-              <div className="text-6xl">{flagEmoji(j.bandeira_visitante)}</div>
-              <div className="mt-2 font-bold">{j.time_visitante}</div>
-            </div>
+            <TimeBig nome={j.time_visitante} logo={j.bandeira_visitante} />
           </div>
         </section>
 
         <section className="grid grid-cols-2 gap-3">
-          <Info label="📺 TV" valor={j.canal_tv} />
-          <Info label="▶ Streaming" valor={j.streaming} />
           <Info label="🏟 Estádio" valor={j.estadio} />
           <Info label="📍 Cidade" valor={j.cidade} />
         </section>
@@ -145,6 +132,19 @@ function JogoPage() {
           Compartilhar no WhatsApp
         </a>
       </main>
+    </div>
+  );
+}
+
+function TimeBig({ nome, logo }: { nome: string; logo: string | null }) {
+  return (
+    <div className="flex-1">
+      {logo ? (
+        <img src={logo} alt={nome} className="w-20 h-20 mx-auto object-contain" />
+      ) : (
+        <div className="text-6xl">🏳️</div>
+      )}
+      <div className="mt-2 font-bold">{nome}</div>
     </div>
   );
 }
