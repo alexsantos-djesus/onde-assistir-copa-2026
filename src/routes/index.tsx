@@ -350,7 +350,140 @@ function HomePage() {
   );
 }
 
-function Rodape({ jogos }: { jogos: Jogo[] }) {
+const FASES_MATA: { key: string; label: string; match: (f: string) => boolean }[] = [
+  { key: "oitavas", label: "Oitavas", match: (f) => /oitava/i.test(f) },
+  { key: "quartas", label: "Quartas", match: (f) => /quart/i.test(f) },
+  { key: "semi", label: "Semifinal", match: (f) => /semi/i.test(f) },
+  { key: "terceiro", label: "3º Lugar", match: (f) => /terceiro|3.*lugar/i.test(f) },
+  { key: "final", label: "Final", match: (f) => /^final$|^grande final/i.test(f) },
+];
+
+function MataMata({ jogos }: { jogos: Jogo[] }) {
+  const porFase = FASES_MATA.map((fase) => ({
+    ...fase,
+    lista: jogos
+      .filter((j) => j.fase && fase.match(j.fase))
+      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime()),
+  }));
+
+  const temAlgum = porFase.some((f) => f.lista.length > 0);
+  if (!temAlgum) {
+    return (
+      <div
+        className="rounded-2xl p-8 text-center text-muted-foreground"
+        style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+      >
+        O chaveamento será preenchido após o término da fase de grupos.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto -mx-4 px-4 pb-2">
+      <div className="flex gap-4 min-w-max">
+        {porFase.map((fase) => (
+          <div key={fase.key} className="flex flex-col gap-3 w-64 shrink-0">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-accent text-center">
+              {fase.label}
+            </h3>
+            <div
+              className="flex-1 flex flex-col justify-around gap-3"
+              style={{ minHeight: 480 }}
+            >
+              {fase.lista.length === 0 && (
+                <div className="rounded-xl p-4 text-center text-xs text-muted-foreground border border-dashed border-white/10">
+                  A definir
+                </div>
+              )}
+              {fase.lista.map((j) => (
+                <BracketCard key={j.id} jogo={j} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BracketCard({ jogo: j }: { jogo: Jogo }) {
+  const aoVivo = j.status === "ao_vivo";
+  const placar =
+    j.placar_mandante != null && j.placar_visitante != null
+      ? `${j.placar_mandante}-${j.placar_visitante}`
+      : null;
+  return (
+    <Link
+      to="/jogo/$id"
+      params={{ id: j.id }}
+      className="block rounded-xl p-3 transition hover:scale-[1.02]"
+      style={{
+        background: "var(--glass-bg)",
+        border: `1px solid ${aoVivo ? "var(--destructive)" : "var(--glass-border)"}`,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center justify-between">
+        <span>{formatData(j.data_hora)}</span>
+        <span>{formatHora(j.data_hora)}</span>
+      </div>
+      <Linha
+        nome={j.time_mandante}
+        cod={j.bandeira_mandante}
+        gols={j.placar_mandante}
+        venceu={
+          placar != null &&
+          j.placar_mandante != null &&
+          j.placar_visitante != null &&
+          j.placar_mandante > j.placar_visitante
+        }
+      />
+      <Linha
+        nome={j.time_visitante}
+        cod={j.bandeira_visitante}
+        gols={j.placar_visitante}
+        venceu={
+          placar != null &&
+          j.placar_mandante != null &&
+          j.placar_visitante != null &&
+          j.placar_visitante > j.placar_mandante
+        }
+      />
+      {j.estadio && (
+        <div className="text-[10px] text-muted-foreground mt-2 truncate">
+          🏟 {j.estadio}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function Linha({
+  nome,
+  cod,
+  gols,
+  venceu,
+}: {
+  nome: string;
+  cod: string | null;
+  gols: number | null;
+  venceu: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-2 py-1 text-sm ${
+        venceu ? "font-bold" : "text-muted-foreground"
+      }`}
+    >
+      <span className="flex items-center gap-2 truncate">
+        <Bandeira code={cod} size={18} />
+        <span className="truncate">{nome}</span>
+      </span>
+      <span className="tabular-nums w-5 text-right">{gols ?? "–"}</span>
+    </div>
+  );
+}
+
+
   const ultima = jogos
     .map((j) => j.updated_at)
     .filter((d): d is string => !!d)
