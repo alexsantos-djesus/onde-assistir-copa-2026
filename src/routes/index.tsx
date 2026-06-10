@@ -151,7 +151,10 @@ function HomePage() {
   const [filtro, setFiltro] = useState<Filtro>("hoje");
   const [busca, setBusca] = useState("");
   const [grupoSel, setGrupoSel] = useState<string | "todos">("todos");
+  const [faseSel, setFaseSel] = useState<string>("todas");
+  const [statusSel, setStatusSel] = useState<"todos" | "ao_vivo" | "agendado" | "encerrado">("todos");
   const [, tick] = useState(0);
+
 
   useEffect(() => {
     const id = setInterval(() => tick((n) => n + 1), 60_000);
@@ -171,23 +174,35 @@ function HomePage() {
   });
 
   const jogos = (data ?? []).filter((j) => {
-    if (!busca.trim()) return true;
-    const q = normalizar(busca);
-    const campos = [
-      j.time_mandante,
-      j.time_visitante,
-      j.bandeira_mandante ?? "",
-      j.bandeira_visitante ?? "",
-      j.fase ?? "",
-      j.estadio ?? "",
-      j.cidade ?? "",
-      j.canal_tv ?? "",
-    ];
-    return campos.some((c) => normalizar(c).includes(q));
+    if (busca.trim()) {
+      const q = normalizar(busca);
+      const campos = [
+        j.time_mandante,
+        j.time_visitante,
+        j.bandeira_mandante ?? "",
+        j.bandeira_visitante ?? "",
+        j.fase ?? "",
+        j.estadio ?? "",
+        j.cidade ?? "",
+        j.canal_tv ?? "",
+      ];
+      if (!campos.some((c) => normalizar(c).includes(q))) return false;
+    }
+    if (statusSel !== "todos" && j.status !== statusSel) return false;
+    if (faseSel !== "todas") {
+      const f = normalizar(j.fase ?? "");
+      if (faseSel === "grupos" && !f.includes("grupo")) return false;
+      if (faseSel === "oitavas" && !f.includes("oitava")) return false;
+      if (faseSel === "quartas" && !f.includes("quart")) return false;
+      if (faseSel === "semi" && !f.includes("semi")) return false;
+      if (faseSel === "final" && !(f === "final" || f.includes("3") || f.includes("terceiro"))) return false;
+    }
+    return true;
   });
   const visiveis = filtrar(jogos, filtro);
-  const grupos = montarGrupos(jogos);
+  const grupos = montarGrupos(data ?? []);
   const letrasGrupos = Object.keys(grupos).sort();
+
 
   return (
     <div
@@ -240,28 +255,46 @@ function HomePage() {
 
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {(["hoje", "amanha", "semana", "todos"] as Filtro[]).map((f) => (
-                <button
+                <Chip
                   key={f}
+                  ativo={filtro === f}
                   onClick={() => setFiltro(f)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
-                    filtro === f
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card/60 text-foreground border border-white/10"
-                  }`}
-                >
-                  {f === "hoje"
-                    ? "Hoje"
-                    : f === "amanha"
-                      ? "Amanhã"
-                      : f === "semana"
-                        ? "Semana"
-                        : "Todos"}
-                </button>
+                  label={f === "hoje" ? "Hoje" : f === "amanha" ? "Amanhã" : f === "semana" ? "Semana" : "Todos"}
+                />
+              ))}
+            </div>
+
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+              {(
+                [
+                  ["todos", "Todos status"],
+                  ["ao_vivo", "🔴 Ao vivo"],
+                  ["agendado", "Agendados"],
+                  ["encerrado", "Encerrados"],
+                ] as const
+              ).map(([v, lab]) => (
+                <Chip key={v} ativo={statusSel === v} onClick={() => setStatusSel(v)} label={lab} />
+              ))}
+            </div>
+
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+              {(
+                [
+                  ["todas", "Todas fases"],
+                  ["grupos", "Fase de grupos"],
+                  ["oitavas", "Oitavas"],
+                  ["quartas", "Quartas"],
+                  ["semi", "Semifinal"],
+                  ["final", "Final / 3º"],
+                ] as const
+              ).map(([v, lab]) => (
+                <Chip key={v} ativo={faseSel === v} onClick={() => setFaseSel(v)} label={lab} />
               ))}
             </div>
           </>
         )}
       </header>
+
 
       <main className="px-4 pb-24 max-w-3xl mx-auto space-y-3">
         {isLoading && <SkeletonList />}
@@ -688,7 +721,31 @@ function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
   );
 }
 
+function Chip({
+  ativo,
+  onClick,
+  label,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+        ativo
+          ? "bg-primary text-primary-foreground shadow"
+          : "bg-card/60 text-foreground border border-white/10 hover:bg-card"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 function SkeletonList() {
+
   return (
     <>
       {[0, 1, 2].map((i) => (
