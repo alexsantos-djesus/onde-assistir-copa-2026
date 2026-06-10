@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase, type Jogo } from "../lib/supabase";
-import { countdown, formatData, formatHora } from "../lib/format";
+import { countdown, flagEmoji, formatData, formatHora } from "../lib/format";
 
 export const Route = createFileRoute("/")({
   head: () => ({
