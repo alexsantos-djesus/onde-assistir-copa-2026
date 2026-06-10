@@ -287,9 +287,38 @@ function HomePage() {
                 Nenhum grupo cadastrado ainda.
               </div>
             )}
-            {letrasGrupos.map((g) => (
-              <GrupoCard key={g} letra={g} dados={grupos[g]} />
-            ))}
+            {letrasGrupos.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                <button
+                  onClick={() => setGrupoSel("todos")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+                    grupoSel === "todos"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card/60 text-foreground border border-white/10"
+                  }`}
+                >
+                  Todos
+                </button>
+                {letrasGrupos.map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGrupoSel(g)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+                      grupoSel === g
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card/60 text-foreground border border-white/10"
+                    }`}
+                  >
+                    Grupo {g}
+                  </button>
+                ))}
+              </div>
+            )}
+            {letrasGrupos
+              .filter((g) => grupoSel === "todos" || g === grupoSel)
+              .map((g) => (
+                <GrupoCard key={g} letra={g} dados={grupos[g]} />
+              ))}
           </>
         )}
       </main>
