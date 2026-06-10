@@ -123,6 +123,8 @@ function JogoPage() {
         </section>
 
         <section className="grid grid-cols-2 gap-3">
+          <Info label="📺 TV" valor={j.canal_tv} />
+          <Info label="▶ Streaming" valor={j.streaming} />
           <Info label="🏟 Estádio" valor={j.estadio} />
           <Info label="📍 Cidade" valor={j.cidade} />
         </section>
