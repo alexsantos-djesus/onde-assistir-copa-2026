@@ -2,7 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase, type Jogo } from "../lib/supabase";
-import { countdown, flagEmoji, formatData, formatHora } from "../lib/format";
+import { countdown, formatData, formatHora } from "../lib/format";
+import { Bandeira } from "../components/Bandeira";
+
+function normalizar(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,7 +27,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Filtro = "todos" | "hoje" | "amanha" | "semana";
-type Aba = "jogos" | "grupos";
+type Aba = "jogos" | "grupos" | "mata";
 
 function filtrar(jogos: Jogo[], f: Filtro): Jogo[] {
   if (f === "todos") return jogos;
@@ -163,11 +172,18 @@ function HomePage() {
 
   const jogos = (data ?? []).filter((j) => {
     if (!busca.trim()) return true;
-    const q = busca.toLowerCase();
-    return (
-      j.time_mandante.toLowerCase().includes(q) ||
-      j.time_visitante.toLowerCase().includes(q)
-    );
+    const q = normalizar(busca);
+    const campos = [
+      j.time_mandante,
+      j.time_visitante,
+      j.bandeira_mandante ?? "",
+      j.bandeira_visitante ?? "",
+      j.fase ?? "",
+      j.estadio ?? "",
+      j.cidade ?? "",
+      j.canal_tv ?? "",
+    ];
+    return campos.some((c) => normalizar(c).includes(q));
   });
   const visiveis = filtrar(jogos, filtro);
   const grupos = montarGrupos(jogos);
@@ -190,10 +206,10 @@ function HomePage() {
         </div>
 
         <div
-          className="mt-5 grid grid-cols-2 rounded-xl p-1 text-sm font-medium"
+          className="mt-5 grid grid-cols-3 rounded-xl p-1 text-sm font-medium"
           style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
         >
-          {(["jogos", "grupos"] as Aba[]).map((a) => (
+          {(["jogos", "grupos", "mata"] as Aba[]).map((a) => (
             <button
               key={a}
               onClick={() => setAba(a)}
@@ -201,10 +217,11 @@ function HomePage() {
                 aba === a ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               }`}
             >
-              {a === "jogos" ? "Jogos" : "Grupos"}
+              {a === "jogos" ? "Jogos" : a === "grupos" ? "Grupos" : "Mata-mata"}
             </button>
           ))}
         </div>
+
 
         {aba === "jogos" && (
           <>
@@ -212,7 +229,7 @@ function HomePage() {
               type="search"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar seleção..."
+              placeholder="Buscar por seleção, fase, estádio, canal..."
               className="mt-4 w-full rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary"
               style={{
                 background: "var(--glass-bg)",
@@ -220,6 +237,7 @@ function HomePage() {
                 backdropFilter: "blur(8px)",
               }}
             />
+
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {(["hoje", "amanha", "semana", "todos"] as Filtro[]).map((f) => (
                 <button
@@ -322,14 +340,152 @@ function HomePage() {
           </>
         )}
 
+        {!isLoading && !error && aba === "mata" && <MataMata jogos={jogos} />}
+
+
+
         <Rodape jogos={jogos} />
       </main>
     </div>
   );
 }
 
+const FASES_MATA: { key: string; label: string; match: (f: string) => boolean }[] = [
+  { key: "oitavas", label: "Oitavas", match: (f) => /oitava/i.test(f) },
+  { key: "quartas", label: "Quartas", match: (f) => /quart/i.test(f) },
+  { key: "semi", label: "Semifinal", match: (f) => /semi/i.test(f) },
+  { key: "terceiro", label: "3º Lugar", match: (f) => /terceiro|3.*lugar/i.test(f) },
+  { key: "final", label: "Final", match: (f) => /^final$|^grande final/i.test(f) },
+];
+
+function MataMata({ jogos }: { jogos: Jogo[] }) {
+  const porFase = FASES_MATA.map((fase) => ({
+    ...fase,
+    lista: jogos
+      .filter((j) => j.fase && fase.match(j.fase))
+      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime()),
+  }));
+
+  const temAlgum = porFase.some((f) => f.lista.length > 0);
+  if (!temAlgum) {
+    return (
+      <div
+        className="rounded-2xl p-8 text-center text-muted-foreground"
+        style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+      >
+        O chaveamento será preenchido após o término da fase de grupos.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto -mx-4 px-4 pb-2">
+      <div className="flex gap-4 min-w-max">
+        {porFase.map((fase) => (
+          <div key={fase.key} className="flex flex-col gap-3 w-64 shrink-0">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-accent text-center">
+              {fase.label}
+            </h3>
+            <div
+              className="flex-1 flex flex-col justify-around gap-3"
+              style={{ minHeight: 480 }}
+            >
+              {fase.lista.length === 0 && (
+                <div className="rounded-xl p-4 text-center text-xs text-muted-foreground border border-dashed border-white/10">
+                  A definir
+                </div>
+              )}
+              {fase.lista.map((j) => (
+                <BracketCard key={j.id} jogo={j} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BracketCard({ jogo: j }: { jogo: Jogo }) {
+  const aoVivo = j.status === "ao_vivo";
+  const placar =
+    j.placar_mandante != null && j.placar_visitante != null
+      ? `${j.placar_mandante}-${j.placar_visitante}`
+      : null;
+  return (
+    <Link
+      to="/jogo/$id"
+      params={{ id: j.id }}
+      className="block rounded-xl p-3 transition hover:scale-[1.02]"
+      style={{
+        background: "var(--glass-bg)",
+        border: `1px solid ${aoVivo ? "var(--destructive)" : "var(--glass-border)"}`,
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center justify-between">
+        <span>{formatData(j.data_hora)}</span>
+        <span>{formatHora(j.data_hora)}</span>
+      </div>
+      <Linha
+        nome={j.time_mandante}
+        cod={j.bandeira_mandante}
+        gols={j.placar_mandante}
+        venceu={
+          placar != null &&
+          j.placar_mandante != null &&
+          j.placar_visitante != null &&
+          j.placar_mandante > j.placar_visitante
+        }
+      />
+      <Linha
+        nome={j.time_visitante}
+        cod={j.bandeira_visitante}
+        gols={j.placar_visitante}
+        venceu={
+          placar != null &&
+          j.placar_mandante != null &&
+          j.placar_visitante != null &&
+          j.placar_visitante > j.placar_mandante
+        }
+      />
+      {j.estadio && (
+        <div className="text-[10px] text-muted-foreground mt-2 truncate">
+          🏟 {j.estadio}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function Linha({
+  nome,
+  cod,
+  gols,
+  venceu,
+}: {
+  nome: string;
+  cod: string | null;
+  gols: number | null;
+  venceu: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-2 py-1 text-sm ${
+        venceu ? "font-bold" : "text-muted-foreground"
+      }`}
+    >
+      <span className="flex items-center gap-2 truncate">
+        <Bandeira code={cod} size={18} />
+        <span className="truncate">{nome}</span>
+      </span>
+      <span className="tabular-nums w-5 text-right">{gols ?? "–"}</span>
+    </div>
+  );
+}
+
 function Rodape({ jogos }: { jogos: Jogo[] }) {
   const ultima = jogos
+
     .map((j) => j.updated_at)
     .filter((d): d is string => !!d)
     .sort()
@@ -388,7 +544,7 @@ function GrupoCard({
                 <td className="py-1.5 pr-2 text-muted-foreground">{i + 1}</td>
                 <td className="py-1.5 pr-2">
                   <span className="flex items-center gap-1.5">
-                    <span className="text-base">{flagEmoji(l.bandeira)}</span>
+                    <Bandeira code={l.bandeira} size={20} />
                     <span className="font-medium">{l.time}</span>
                   </span>
                 </td>
@@ -467,8 +623,9 @@ function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
       <span className="text-xs text-muted-foreground w-20 shrink-0">
         {formatData(j.data_hora)}
       </span>
-      <span className="flex-1 text-right truncate">
-        {flagEmoji(j.bandeira_mandante)} {j.time_mandante}
+      <span className="flex-1 flex items-center justify-end gap-1.5 truncate">
+        <span className="truncate">{j.time_mandante}</span>
+        <Bandeira code={j.bandeira_mandante} size={18} />
       </span>
       <span
         className={`font-bold min-w-12 text-center ${
@@ -479,9 +636,11 @@ function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
           ? `${j.placar_mandante} × ${j.placar_visitante}`
           : formatHora(j.data_hora)}
       </span>
-      <span className="flex-1 truncate">
-        {j.time_visitante} {flagEmoji(j.bandeira_visitante)}
+      <span className="flex-1 flex items-center gap-1.5 truncate">
+        <Bandeira code={j.bandeira_visitante} size={18} />
+        <span className="truncate">{j.time_visitante}</span>
       </span>
+
     </Link>
   );
 }
@@ -587,11 +746,8 @@ function Time({
         alinhar === "right" ? "flex-row-reverse text-right" : ""
       }`}
     >
-      {logo && /^https?:\/\//.test(logo) ? (
-        <img src={logo} alt={nome} className="w-10 h-10 object-contain" loading="lazy" />
-      ) : (
-        <div className="text-3xl leading-none">{flagEmoji(logo)}</div>
-      )}
+      <Bandeira code={logo} size={40} />
+
       <div className="font-semibold leading-tight">{nome}</div>
     </div>
   );
