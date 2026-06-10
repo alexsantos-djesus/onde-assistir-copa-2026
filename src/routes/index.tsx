@@ -412,21 +412,29 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
   }
 
   const ref = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ x: number; left: number; moved: boolean } | null>(null);
+  const drag = useRef<{ x: number; y: number; left: number; top: number; moved: boolean } | null>(null);
   const [arrastando, setArrastando] = useState(false);
 
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = ref.current;
     if (!el) return;
-    drag.current = { x: e.clientX, left: el.scrollLeft, moved: false };
+    drag.current = {
+      x: e.clientX,
+      y: e.clientY,
+      left: el.scrollLeft,
+      top: el.scrollTop,
+      moved: false,
+    };
     setArrastando(true);
   };
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = ref.current;
     if (!el || !drag.current) return;
     const dx = e.clientX - drag.current.x;
-    if (Math.abs(dx) > 4) drag.current.moved = true;
+    const dy = e.clientY - drag.current.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) drag.current.moved = true;
     el.scrollLeft = drag.current.left - dx;
+    el.scrollTop = drag.current.top - dy;
   };
   const onUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (drag.current?.moved) {
@@ -450,11 +458,12 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
           e.stopPropagation();
         }
       }}
-      className={`overflow-x-auto -mx-4 px-4 pb-2 select-none ${
+      className={`overflow-auto -mx-4 px-4 pb-2 select-none ${
         arrastando ? "cursor-grabbing" : "cursor-grab"
       }`}
-      style={{ touchAction: "pan-y" }}
+      style={{ touchAction: "none", maxHeight: "70vh", overscrollBehavior: "contain" }}
     >
+
       <div className="flex gap-4 min-w-max">
         {porFase.map((fase) => (
           <div key={fase.key} className="flex flex-col gap-3 w-64 shrink-0">
