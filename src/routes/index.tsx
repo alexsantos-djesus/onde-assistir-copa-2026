@@ -381,32 +381,83 @@ function GrupoCard({
         </table>
       </div>
 
-      <div className="mt-4 space-y-2">
-        {dados.jogos.map((j) => (
-          <Link
-            key={j.id}
-            to="/jogo/$id"
-            params={{ id: j.id }}
-            className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm border border-white/5 hover:bg-white/5 transition"
-          >
-            <span className="text-xs text-muted-foreground w-20 shrink-0">
-              {formatData(j.data_hora)}
-            </span>
-            <span className="flex-1 text-right truncate">
-              {flagEmoji(j.bandeira_mandante)} {j.time_mandante}
-            </span>
-            <span className="font-bold min-w-12 text-center">
-              {j.placar_mandante != null && j.placar_visitante != null
-                ? `${j.placar_mandante} × ${j.placar_visitante}`
-                : formatHora(j.data_hora)}
-            </span>
-            <span className="flex-1 truncate">
-              {j.time_visitante} {flagEmoji(j.bandeira_visitante)}
-            </span>
-          </Link>
-        ))}
+      <div className="mt-4 space-y-4">
+        {(() => {
+          const agora = Date.now();
+          const proximos = dados.jogos.filter(
+            (j) =>
+              j.status !== "encerrado" &&
+              (j.status === "ao_vivo" ||
+                new Date(j.data_hora).getTime() >= agora - 2 * 60 * 60 * 1000),
+          );
+          const ultimos = dados.jogos
+            .filter(
+              (j) =>
+                j.status === "encerrado" ||
+                new Date(j.data_hora).getTime() < agora - 2 * 60 * 60 * 1000,
+            )
+            .reverse();
+          return (
+            <>
+              {proximos.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    Próximos
+                  </h3>
+                  <div className="space-y-2">
+                    {proximos.map((j) => (
+                      <JogoLinhaGrupo key={j.id} jogo={j} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {ultimos.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    Últimos
+                  </h3>
+                  <div className="space-y-2">
+                    {ultimos.map((j) => (
+                      <JogoLinhaGrupo key={j.id} jogo={j} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </section>
+  );
+}
+
+function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
+  const aoVivo = j.status === "ao_vivo";
+  return (
+    <Link
+      to="/jogo/$id"
+      params={{ id: j.id }}
+      className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm border border-white/5 hover:bg-white/5 transition"
+    >
+      <span className="text-xs text-muted-foreground w-20 shrink-0">
+        {formatData(j.data_hora)}
+      </span>
+      <span className="flex-1 text-right truncate">
+        {flagEmoji(j.bandeira_mandante)} {j.time_mandante}
+      </span>
+      <span
+        className={`font-bold min-w-12 text-center ${
+          aoVivo ? "text-destructive" : ""
+        }`}
+      >
+        {j.placar_mandante != null && j.placar_visitante != null
+          ? `${j.placar_mandante} × ${j.placar_visitante}`
+          : formatHora(j.data_hora)}
+      </span>
+      <span className="flex-1 truncate">
+        {j.time_visitante} {flagEmoji(j.bandeira_visitante)}
+      </span>
+    </Link>
   );
 }
 
