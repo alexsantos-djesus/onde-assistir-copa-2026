@@ -1,8 +1,8 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { obterJogo, type Jogo } from "../lib/fixtures.functions";
-import { countdown, formatData, formatHora } from "../lib/format";
+import { supabase, type Jogo } from "../lib/supabase";
+import { countdown, flagEmoji, formatData, formatHora } from "../lib/format";
 
 export const Route = createFileRoute("/jogo/$id")({
   component: JogoPage,
@@ -29,9 +29,14 @@ function JogoPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["jogo", id],
     queryFn: async () => {
-      const j = await obterJogo({ data: { id } });
-      if (!j) throw notFound();
-      return j as Jogo;
+      const { data, error } = await supabase
+        .from("jogos")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw notFound();
+      return data as Jogo;
     },
   });
 
@@ -118,6 +123,8 @@ function JogoPage() {
         </section>
 
         <section className="grid grid-cols-2 gap-3">
+          <Info label="📺 TV" valor={j.canal_tv} />
+          <Info label="▶ Streaming" valor={j.streaming} />
           <Info label="🏟 Estádio" valor={j.estadio} />
           <Info label="📍 Cidade" valor={j.cidade} />
         </section>
@@ -139,10 +146,10 @@ function JogoPage() {
 function TimeBig({ nome, logo }: { nome: string; logo: string | null }) {
   return (
     <div className="flex-1">
-      {logo ? (
+      {logo && /^https?:\/\//.test(logo) ? (
         <img src={logo} alt={nome} className="w-20 h-20 mx-auto object-contain" />
       ) : (
-        <div className="text-6xl">🏳️</div>
+        <div className="text-6xl">{flagEmoji(logo)}</div>
       )}
       <div className="mt-2 font-bold">{nome}</div>
     </div>

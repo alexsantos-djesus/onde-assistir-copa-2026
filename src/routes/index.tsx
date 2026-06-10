@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { listarJogos, type Jogo } from "../lib/fixtures.functions";
-import { countdown, formatData, formatHora } from "../lib/format";
+import { supabase, type Jogo } from "../lib/supabase";
+import { countdown, flagEmoji, formatData, formatHora } from "../lib/format";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -49,8 +49,14 @@ function HomePage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["jogos"],
-    queryFn: () => listarJogos(),
-    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("jogos")
+        .select("*")
+        .order("data_hora", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Jogo[];
+    },
   });
 
   const jogos = (data ?? []).filter((j) => {
@@ -244,10 +250,10 @@ function Time({
         alinhar === "right" ? "flex-row-reverse text-right" : ""
       }`}
     >
-      {logo ? (
+      {logo && /^https?:\/\//.test(logo) ? (
         <img src={logo} alt={nome} className="w-10 h-10 object-contain" loading="lazy" />
       ) : (
-        <div className="text-3xl leading-none">🏳️</div>
+        <div className="text-3xl leading-none">{flagEmoji(logo)}</div>
       )}
       <div className="font-semibold leading-tight">{nome}</div>
     </div>
