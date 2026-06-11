@@ -2,7 +2,7 @@
 
 > 🏆 Acompanhe a Copa do Mundo 2026 em tempo real — horários, estádios, canais de TV/streaming, tabela dos grupos, chaveamento interativo e placar ao vivo.
 
-🔗 **Acesse:** [onde-assistir-copa-2026.lovable.app](https://onde-assistir-copa-2026.lovable.app)
+🔗 **Acesse:** [onde-assistir-copa-2026.vercel.app](https://onde-assistir-copa-2026.vercel.app/)
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
