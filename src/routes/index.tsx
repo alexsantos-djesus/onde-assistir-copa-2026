@@ -183,7 +183,7 @@ function HomePage() {
         .select("*")
         .order("data_hora", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Jogo[];
+      return ((data ?? []) as Jogo[]).map(comStatusEfetivo);
     },
   });
 
