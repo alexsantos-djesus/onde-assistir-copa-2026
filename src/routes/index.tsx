@@ -603,8 +603,11 @@ function BracketCard({ jogo: j, destaque = false }: { jogo: Jogo; destaque?: boo
       params={{ id: j.id }}
       className="block rounded-xl p-3 transition hover:scale-[1.02]"
       style={{
-        background: "var(--glass-bg)",
-        border: `1px solid ${aoVivo ? "var(--destructive)" : "var(--glass-border)"}`,
+        background: destaque ? "var(--gradient-accent, var(--glass-bg))" : "var(--glass-bg)",
+        border: `1px solid ${
+          aoVivo ? "var(--destructive)" : destaque ? "var(--accent)" : "var(--glass-border)"
+        }`,
+        boxShadow: destaque ? "0 0 0 2px color-mix(in oklab, var(--accent) 30%, transparent)" : undefined,
       }}
     >
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center justify-between">
