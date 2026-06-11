@@ -143,6 +143,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
 
     let inseridos = 0;
     let atualizados = 0;
+    const erros: string[] = [];
 
     for (const e of events) {
       const dataHora =
@@ -164,40 +165,46 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
         }
       }
 
-      const row = {
-        data_hora: dataHora,
-        time_mandante: e.strHomeTeam,
-        time_visitante: e.strAwayTeam,
-        bandeira_mandante: codigo(e.strHomeTeam),
-        bandeira_visitante: codigo(e.strAwayTeam),
-        estadio: e.strVenue,
-        cidade: e.strCountry,
-        fase: mapFase(e.intRound),
-        status,
-        placar_mandante: placarM,
-        placar_visitante: placarV,
-      };
+      const mandante = nomePT(e.strHomeTeam);
+      const visitante = nomePT(e.strAwayTeam);
 
-      const key = `${row.time_mandante}|${row.time_visitante}|${dataHora.slice(0, 10)}`;
+      const key = `${mandante}|${visitante}|${dataHora.slice(0, 10)}`;
       const exist = byKey.get(key);
 
       if (exist) {
+        // Atualiza só placar e status para não sobrescrever dados editados
         const { error } = await supabase
           .from("jogos")
-          .update(row)
+          .update({ status, placar_mandante: placarM, placar_visitante: placarV })
           .eq("id", exist.id);
-        if (!error) atualizados++;
+        if (error) erros.push(`${key}: ${error.message}`);
+        else atualizados++;
       } else {
+        const row = {
+          data_hora: dataHora,
+          time_mandante: mandante,
+          time_visitante: visitante,
+          bandeira_mandante: codigo(e.strHomeTeam),
+          bandeira_visitante: codigo(e.strAwayTeam),
+          estadio: e.strVenue,
+          cidade: e.strCountry,
+          fase: mapFase(e.intRound),
+          status,
+          placar_mandante: placarM,
+          placar_visitante: placarV,
+        };
         const { error } = await supabase.from("jogos").insert(row);
-        if (!error) inseridos++;
+        if (error) erros.push(`${key}: ${error.message}`);
+        else inseridos++;
       }
     }
 
     return {
-      ok: true,
+      ok: erros.length === 0,
       total: events.length,
       inseridos,
       atualizados,
+      erros: erros.slice(0, 5),
       timestamp: new Date().toISOString(),
     };
   },
