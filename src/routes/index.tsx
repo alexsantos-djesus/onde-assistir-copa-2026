@@ -834,9 +834,12 @@ function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
           aoVivo ? "text-destructive" : ""
         }`}
       >
-        {j.placar_mandante != null && j.placar_visitante != null
-          ? `${j.placar_mandante} × ${j.placar_visitante}`
-          : formatHora(j.data_hora)}
+        {(() => {
+          const ended = j.status === "encerrado";
+          const pm = j.placar_mandante ?? (aoVivo || ended ? 0 : null);
+          const pv = j.placar_visitante ?? (aoVivo || ended ? 0 : null);
+          return pm != null && pv != null ? `${pm} × ${pv}` : formatHora(j.data_hora);
+        })()}
       </span>
       <span className="flex-1 flex items-center gap-1.5 truncate">
         <Bandeira code={j.bandeira_visitante} size={18} />
