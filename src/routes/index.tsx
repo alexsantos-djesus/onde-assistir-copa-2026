@@ -896,6 +896,12 @@ function StatusBadge({ status }: { status: string | null }) {
         AO VIVO
       </span>
     );
+  if (status === "intervalo")
+    return (
+      <span className="text-xs px-2 py-1 rounded-full bg-amber-500 text-black font-semibold flex items-center gap-1">
+        ⏸ INTERVALO
+      </span>
+    );
   if (status === "encerrado")
     return (
       <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium">
