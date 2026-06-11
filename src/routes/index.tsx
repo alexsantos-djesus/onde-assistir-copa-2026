@@ -911,8 +911,30 @@ function StatusBadge({ status }: { status: string | null }) {
   return null;
 }
 
+function parseTransmissoes(jogo: Jogo): { label: string; tipo: "tv" | "stream" }[] {
+  const split = (s: string | null) =>
+    (s ?? "")
+      .split(/[,/|;]| e |&/i)
+      .map((x) => x.trim())
+      .filter(Boolean);
+  const tvs = split(jogo.canal_tv).map((label) => ({ label, tipo: "tv" as const }));
+  const streams = split(jogo.streaming).map((label) => ({ label, tipo: "stream" as const }));
+  const todos = [...tvs, ...streams];
+  // remove duplicatas mantendo a ordem
+  const visto = new Set<string>();
+  const unicos = todos.filter((t) => {
+    const k = t.label.toLowerCase();
+    if (visto.has(k)) return false;
+    visto.add(k);
+    return true;
+  });
+  return unicos.slice(0, 2);
+}
+
 function JogoCard({ jogo }: { jogo: Jogo }) {
   const ended = jogo.status === "encerrado";
+  const live = jogo.status === "ao_vivo" || jogo.status === "intervalo";
+  const transmissoes = parseTransmissoes(jogo);
   return (
     <Link
       to="/jogo/$id"
@@ -930,7 +952,7 @@ function JogoCard({ jogo }: { jogo: Jogo }) {
         </span>
         <div className="flex items-center gap-2">
           <StatusBadge status={jogo.status} />
-          {!ended && jogo.status !== "ao_vivo" && (
+          {!ended && !live && (
             <span className="text-primary font-medium">{countdown(jogo.data_hora)}</span>
           )}
         </div>
@@ -940,7 +962,6 @@ function JogoCard({ jogo }: { jogo: Jogo }) {
         <Time nome={jogo.time_mandante} logo={jogo.bandeira_mandante} />
         <div className="text-center min-w-16">
           {(() => {
-            const live = jogo.status === "ao_vivo";
             const pm = jogo.placar_mandante ?? (live || ended ? 0 : null);
             const pv = jogo.placar_visitante ?? (live || ended ? 0 : null);
             return pm != null && pv != null ? (
@@ -959,6 +980,20 @@ function JogoCard({ jogo }: { jogo: Jogo }) {
         </div>
         <Time nome={jogo.time_visitante} logo={jogo.bandeira_visitante} alinhar="right" />
       </div>
+
+      {transmissoes.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {transmissoes.map((t) => (
+            <span
+              key={t.label}
+              className="text-[11px] px-2 py-1 rounded-full font-medium flex items-center gap-1 bg-card/60 border border-white/10"
+            >
+              <span>{t.tipo === "tv" ? "📺" : "▶"}</span>
+              {t.label}
+            </span>
+          ))}
+        </div>
+      )}
 
       {jogo.estadio && (
         <div className="mt-3 text-xs text-muted-foreground">
