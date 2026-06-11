@@ -26,6 +26,68 @@ function codigo(nome: string | null): string | null {
   return COUNTRY_CODES[nome] ?? null;
 }
 
+// TheSportsDB retorna nomes em inglês; o banco usa português.
+const TEAM_PT: Record<string, string> = {
+  Mexico: "México",
+  "South Africa": "África do Sul",
+  "South Korea": "Coreia do Sul",
+  Korea: "Coreia do Sul",
+  "Republic of Korea": "Coreia do Sul",
+  "Czech Republic": "Rep. Tcheca",
+  Czechia: "Rep. Tcheca",
+  Canada: "Canadá",
+  "Bosnia-Herzegovina": "Bósnia e Herzegovina",
+  "Bosnia and Herzegovina": "Bósnia e Herzegovina",
+  USA: "EUA",
+  "United States": "EUA",
+  Paraguay: "Paraguai",
+  Brazil: "Brasil",
+  Morocco: "Marrocos",
+  Qatar: "Catar",
+  Switzerland: "Suíça",
+  Haiti: "Haiti",
+  Scotland: "Escócia",
+  Germany: "Alemanha",
+  Curacao: "Curaçao",
+  "Curaçao": "Curaçao",
+  "Ivory Coast": "Costa do Marfim",
+  Ecuador: "Equador",
+  Netherlands: "Holanda",
+  Japan: "Japão",
+  Australia: "Austrália",
+  Turkey: "Turquia",
+  Belgium: "Bélgica",
+  Egypt: "Egito",
+  "Saudi Arabia": "Arábia Saudita",
+  Uruguay: "Uruguai",
+  Spain: "Espanha",
+  "Cape Verde": "Cabo Verde",
+  Sweden: "Suécia",
+  Tunisia: "Tunísia",
+  Argentina: "Argentina",
+  Algeria: "Argélia",
+  Colombia: "Colômbia",
+  Croatia: "Croácia",
+  England: "Inglaterra",
+  France: "França",
+  Ghana: "Gana",
+  Iran: "Irã",
+  Iraq: "Iraque",
+  Jordan: "Jordânia",
+  Norway: "Noruega",
+  "New Zealand": "Nova Zelândia",
+  Panama: "Panamá",
+  Portugal: "Portugal",
+  "DR Congo": "RD Congo",
+  Senegal: "Senegal",
+  Uzbekistan: "Uzbequistão",
+  Austria: "Áustria",
+};
+
+function nomePT(nome: string): string {
+  return TEAM_PT[nome] ?? nome;
+}
+
 function mapStatus(s: string | null, postponed: string | null): string {
   if (postponed === "yes") return "adiado";
   const x = (s ?? "").toUpperCase();
@@ -74,13 +136,17 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
     if (errSel) throw errSel;
 
     const byKey = new Map<string, { id: string; pm: number | null; pv: number | null }>();
+    const byTimes = new Map<string, { id: string; pm: number | null; pv: number | null }>();
     for (const j of existentes ?? []) {
       const k = `${j.time_mandante}|${j.time_visitante}|${(j.data_hora ?? "").slice(0, 10)}`;
-      byKey.set(k, { id: j.id, pm: j.placar_mandante, pv: j.placar_visitante });
+      const v = { id: j.id, pm: j.placar_mandante, pv: j.placar_visitante };
+      byKey.set(k, v);
+      byTimes.set(`${j.time_mandante}|${j.time_visitante}`, v);
     }
 
     let inseridos = 0;
     let atualizados = 0;
+    const erros: string[] = [];
 
     for (const e of events) {
       const dataHora =
@@ -102,40 +168,53 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
         }
       }
 
-      const row = {
-        data_hora: dataHora,
-        time_mandante: e.strHomeTeam,
-        time_visitante: e.strAwayTeam,
-        bandeira_mandante: codigo(e.strHomeTeam),
-        bandeira_visitante: codigo(e.strAwayTeam),
-        estadio: e.strVenue,
-        cidade: e.strCountry,
-        fase: mapFase(e.intRound),
-        status,
-        placar_mandante: placarM,
-        placar_visitante: placarV,
-      };
+      const mandante = nomePT(e.strHomeTeam);
+      const visitante = nomePT(e.strAwayTeam);
 
-      const key = `${row.time_mandante}|${row.time_visitante}|${dataHora.slice(0, 10)}`;
-      const exist = byKey.get(key);
+      const key = `${mandante}|${visitante}|${dataHora.slice(0, 10)}`;
+      const porData = byKey.get(key);
+      // Fallback: mesmo confronto com data divergente — atualiza e corrige a data
+      const exist = porData ?? byTimes.get(`${mandante}|${visitante}`);
 
       if (exist) {
+        const patch: Record<string, unknown> = {
+          status,
+          placar_mandante: placarM,
+          placar_visitante: placarV,
+        };
+        if (!porData) patch.data_hora = dataHora;
         const { error } = await supabase
           .from("jogos")
-          .update(row)
+          .update(patch)
           .eq("id", exist.id);
-        if (!error) atualizados++;
+        if (error) erros.push(`${key}: ${error.message}`);
+        else atualizados++;
       } else {
+        const row = {
+          data_hora: dataHora,
+          time_mandante: mandante,
+          time_visitante: visitante,
+          bandeira_mandante: codigo(e.strHomeTeam),
+          bandeira_visitante: codigo(e.strAwayTeam),
+          estadio: e.strVenue,
+          cidade: e.strCountry,
+          fase: mapFase(e.intRound),
+          status,
+          placar_mandante: placarM,
+          placar_visitante: placarV,
+        };
         const { error } = await supabase.from("jogos").insert(row);
-        if (!error) inseridos++;
+        if (error) erros.push(`${key}: ${error.message}`);
+        else inseridos++;
       }
     }
 
     return {
-      ok: true,
+      ok: erros.length === 0,
       total: events.length,
       inseridos,
       atualizados,
+      erros: erros.slice(0, 5),
       timestamp: new Date().toISOString(),
     };
   },
