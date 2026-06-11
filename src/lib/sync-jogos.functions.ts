@@ -92,7 +92,8 @@ function mapStatus(s: string | null, postponed: string | null): string {
   if (postponed === "yes") return "adiado";
   const x = (s ?? "").toUpperCase();
   if (x === "FT" || x === "AET" || x === "PEN" || x === "FINISHED") return "encerrado";
-  if (x === "1H" || x === "2H" || x === "HT" || x === "LIVE" || x === "ET") return "ao_vivo";
+  if (x === "HT") return "intervalo";
+  if (x === "1H" || x === "2H" || x === "LIVE" || x === "ET") return "ao_vivo";
   return "agendado";
 }
 
