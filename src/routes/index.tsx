@@ -29,6 +29,20 @@ export const Route = createFileRoute("/")({
 type Filtro = "todos" | "hoje" | "amanha" | "semana";
 type Aba = "jogos" | "grupos" | "mata";
 
+// Duração estimada de uma partida (jogo + acréscimos + intervalo)
+const DURACAO_JOGO_MS = 1000 * 60 * 60 * 3;
+
+function comStatusEfetivo(j: Jogo): Jogo {
+  if (j.status === "agendado") {
+    const inicio = new Date(j.data_hora).getTime();
+    const agora = Date.now();
+    if (agora >= inicio && agora < inicio + DURACAO_JOGO_MS) {
+      return { ...j, status: "ao_vivo" };
+    }
+  }
+  return j;
+}
+
 function filtrar(jogos: Jogo[], f: Filtro): Jogo[] {
   if (f === "todos") return jogos;
   const now = new Date();
