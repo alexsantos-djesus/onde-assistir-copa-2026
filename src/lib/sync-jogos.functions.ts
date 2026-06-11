@@ -172,13 +172,20 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       const visitante = nomePT(e.strAwayTeam);
 
       const key = `${mandante}|${visitante}|${dataHora.slice(0, 10)}`;
-      const exist = byKey.get(key);
+      const porData = byKey.get(key);
+      // Fallback: mesmo confronto com data divergente — atualiza e corrige a data
+      const exist = porData ?? byTimes.get(`${mandante}|${visitante}`);
 
       if (exist) {
-        // Atualiza só placar e status para não sobrescrever dados editados
+        const patch: Record<string, unknown> = {
+          status,
+          placar_mandante: placarM,
+          placar_visitante: placarV,
+        };
+        if (!porData) patch.data_hora = dataHora;
         const { error } = await supabase
           .from("jogos")
-          .update({ status, placar_mandante: placarM, placar_visitante: placarV })
+          .update(patch)
           .eq("id", exist.id);
         if (error) erros.push(`${key}: ${error.message}`);
         else atualizados++;
