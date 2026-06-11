@@ -834,9 +834,12 @@ function JogoLinhaGrupo({ jogo: j }: { jogo: Jogo }) {
           aoVivo ? "text-destructive" : ""
         }`}
       >
-        {j.placar_mandante != null && j.placar_visitante != null
-          ? `${j.placar_mandante} × ${j.placar_visitante}`
-          : formatHora(j.data_hora)}
+        {(() => {
+          const ended = j.status === "encerrado";
+          const pm = j.placar_mandante ?? (aoVivo || ended ? 0 : null);
+          const pv = j.placar_visitante ?? (aoVivo || ended ? 0 : null);
+          return pm != null && pv != null ? `${pm} × ${pv}` : formatHora(j.data_hora);
+        })()}
       </span>
       <span className="flex-1 flex items-center gap-1.5 truncate">
         <Bandeira code={j.bandeira_visitante} size={18} />
@@ -930,14 +933,18 @@ function JogoCard({ jogo }: { jogo: Jogo }) {
       <div className="mt-3 flex items-center justify-between gap-3">
         <Time nome={jogo.time_mandante} logo={jogo.bandeira_mandante} />
         <div className="text-center min-w-16">
-          {jogo.placar_mandante != null && jogo.placar_visitante != null ? (
-            <div className="text-2xl font-bold">
-              {jogo.placar_mandante} <span className="text-muted-foreground">×</span>{" "}
-              {jogo.placar_visitante}
-            </div>
-          ) : (
-            <div className="text-lg font-bold text-muted-foreground">×</div>
-          )}
+          {(() => {
+            const live = jogo.status === "ao_vivo";
+            const pm = jogo.placar_mandante ?? (live || ended ? 0 : null);
+            const pv = jogo.placar_visitante ?? (live || ended ? 0 : null);
+            return pm != null && pv != null ? (
+              <div className={`text-2xl font-bold ${live ? "text-destructive" : ""}`}>
+                {pm} <span className="text-muted-foreground">×</span> {pv}
+              </div>
+            ) : (
+              <div className="text-lg font-bold text-muted-foreground">×</div>
+            );
+          })()}
           {jogo.fase && (
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">
               {jogo.fase}
