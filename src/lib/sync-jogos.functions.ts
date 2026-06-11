@@ -88,6 +88,20 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
         (e.dateEvent && e.strTime ? `${e.dateEvent}T${e.strTime}Z` : null);
       if (!dataHora || !e.strHomeTeam || !e.strAwayTeam) continue;
 
+      let status = mapStatus(e.strStatus, e.strPostponed);
+      const placarM = e.intHomeScore != null ? Number(e.intHomeScore) : null;
+      const placarV = e.intAwayScore != null ? Number(e.intAwayScore) : null;
+
+      // Fallback: TheSportsDB às vezes demora a marcar como LIVE.
+      // Se o jogo já começou (até 3h após o horário) e não foi encerrado/adiado, marca ao vivo.
+      if (status === "agendado") {
+        const inicio = new Date(dataHora).getTime();
+        const agora = Date.now();
+        if (agora >= inicio && agora < inicio + 1000 * 60 * 60 * 3) {
+          status = "ao_vivo";
+        }
+      }
+
       const row = {
         data_hora: dataHora,
         time_mandante: e.strHomeTeam,
@@ -97,9 +111,9 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
         estadio: e.strVenue,
         cidade: e.strCountry,
         fase: mapFase(e.intRound),
-        status: mapStatus(e.strStatus, e.strPostponed),
-        placar_mandante: e.intHomeScore != null ? Number(e.intHomeScore) : null,
-        placar_visitante: e.intAwayScore != null ? Number(e.intAwayScore) : null,
+        status,
+        placar_mandante: placarM,
+        placar_visitante: placarV,
       };
 
       const key = `${row.time_mandante}|${row.time_visitante}|${dataHora.slice(0, 10)}`;
