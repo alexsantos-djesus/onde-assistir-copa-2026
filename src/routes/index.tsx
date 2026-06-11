@@ -202,7 +202,11 @@ function HomePage() {
       ];
       if (!campos.some((c) => normalizar(c).includes(q))) return false;
     }
-    if (statusSel !== "todos" && j.status !== statusSel) return false;
+    if (statusSel !== "todos") {
+      if (statusSel === "ao_vivo") {
+        if (j.status !== "ao_vivo" && j.status !== "intervalo") return false;
+      } else if (j.status !== statusSel) return false;
+    }
     if (faseSel !== "todas") {
       const f = normalizar(j.fase ?? "");
       if (faseSel === "grupos" && !f.includes("grupo")) return false;
