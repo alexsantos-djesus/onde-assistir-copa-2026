@@ -136,9 +136,12 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
     if (errSel) throw errSel;
 
     const byKey = new Map<string, { id: string; pm: number | null; pv: number | null }>();
+    const byTimes = new Map<string, { id: string; pm: number | null; pv: number | null }>();
     for (const j of existentes ?? []) {
       const k = `${j.time_mandante}|${j.time_visitante}|${(j.data_hora ?? "").slice(0, 10)}`;
-      byKey.set(k, { id: j.id, pm: j.placar_mandante, pv: j.placar_visitante });
+      const v = { id: j.id, pm: j.placar_mandante, pv: j.placar_visitante };
+      byKey.set(k, v);
+      byTimes.set(`${j.time_mandante}|${j.time_visitante}`, v);
     }
 
     let inseridos = 0;
