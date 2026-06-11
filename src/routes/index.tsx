@@ -591,7 +591,7 @@ function SlotVazio({ destaque = false }: { destaque?: boolean }) {
 
 
 
-function BracketCard({ jogo: j }: { jogo: Jogo }) {
+function BracketCard({ jogo: j, destaque = false }: { jogo: Jogo; destaque?: boolean }) {
   const aoVivo = j.status === "ao_vivo";
   const placar =
     j.placar_mandante != null && j.placar_visitante != null
