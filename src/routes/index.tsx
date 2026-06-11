@@ -482,7 +482,7 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
       }`}
       style={{ touchAction: "pan-x pan-y", overscrollBehaviorX: "contain" }}
     >
-      <div className="flex items-stretch gap-2 min-w-max py-2">
+      <div className="flex items-stretch gap-3 min-w-max py-2">
         {/* LADO ESQUERDO */}
         {colunasVisiveis.map((fase) => (
           <ColunaBracket
@@ -493,8 +493,8 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
           />
         ))}
 
-        {/* CENTRO: FINAL + 3º LUGAR */}
-        <div className="w-56 shrink-0 flex flex-col items-center justify-between gap-4 px-1">
+        {/* CENTRO: FINAL centralizada + 3º LUGAR logo abaixo */}
+        <div className="w-56 shrink-0 flex flex-col items-center justify-center gap-5 px-1">
           <div className="w-full">
             <h3 className="text-xs font-bold uppercase tracking-wider text-center mb-2 text-accent">
               Final
@@ -505,8 +505,8 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
               finais.map((j) => <BracketCard key={j.id} jogo={j} destaque />)
             )}
           </div>
-          <div className="w-full">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-center mb-2 text-muted-foreground">
+          <div className="w-full opacity-90">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-center mb-2 text-muted-foreground">
               3º Lugar
             </h3>
             {terceiros.length === 0 ? (
