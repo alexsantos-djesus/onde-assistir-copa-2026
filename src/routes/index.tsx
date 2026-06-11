@@ -103,16 +103,16 @@ function montarGrupos(
     for (const j of lista) {
       const a = ensure(j.time_mandante, j.bandeira_mandante);
       const b = ensure(j.time_visitante, j.bandeira_visitante);
-      if (
-        j.status === "encerrado" &&
+      const emAndamento =
+        (j.status === "ao_vivo" || j.status === "intervalo" || j.status === "encerrado") &&
         j.placar_mandante != null &&
-        j.placar_visitante != null
-      ) {
+        j.placar_visitante != null;
+      if (emAndamento) {
         a.pj++; b.pj++;
-        a.gp += j.placar_mandante; a.gc += j.placar_visitante;
-        b.gp += j.placar_visitante; b.gc += j.placar_mandante;
-        if (j.placar_mandante > j.placar_visitante) { a.v++; a.pts += 3; b.d++; }
-        else if (j.placar_mandante < j.placar_visitante) { b.v++; b.pts += 3; a.d++; }
+        a.gp += j.placar_mandante!; a.gc += j.placar_visitante!;
+        b.gp += j.placar_visitante!; b.gc += j.placar_mandante!;
+        if (j.placar_mandante! > j.placar_visitante!) { a.v++; a.pts += 3; b.d++; }
+        else if (j.placar_mandante! < j.placar_visitante!) { b.v++; b.pts += 3; a.d++; }
         else { a.e++; b.e++; a.pts++; b.pts++; }
       }
     }
