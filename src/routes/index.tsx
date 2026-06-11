@@ -383,23 +383,42 @@ function HomePage() {
   );
 }
 
-const FASES_MATA: { key: string; label: string; match: (f: string) => boolean }[] = [
-  { key: "oitavas", label: "Oitavas", match: (f) => /oitava/i.test(f) },
-  { key: "quartas", label: "Quartas", match: (f) => /quart/i.test(f) },
+type FaseDef = { key: string; label: string; match: (f: string) => boolean };
+
+const FASES_LADO: FaseDef[] = [
+  {
+    key: "segunda",
+    label: "Segunda Fase",
+    match: (f) => /segunda|round of 32|32-?avos|playoff/i.test(f),
+  },
+  { key: "oitavas", label: "Oitavas de Final", match: (f) => /oitava|round of 16|16-?avos/i.test(f) },
+  { key: "quartas", label: "Quartas de Final", match: (f) => /quart/i.test(f) },
   { key: "semi", label: "Semifinal", match: (f) => /semi/i.test(f) },
-  { key: "terceiro", label: "3º Lugar", match: (f) => /terceiro|3.*lugar/i.test(f) },
-  { key: "final", label: "Final", match: (f) => /^final$|^grande final/i.test(f) },
 ];
 
 function MataMata({ jogos }: { jogos: Jogo[] }) {
-  const porFase = FASES_MATA.map((fase) => ({
-    ...fase,
-    lista: jogos
-      .filter((j) => j.fase && fase.match(j.fase))
-      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime()),
-  }));
+  const filtrarFase = (m: (f: string) => boolean) =>
+    jogos
+      .filter((j) => j.fase && m(j.fase))
+      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
 
-  const temAlgum = porFase.some((f) => f.lista.length > 0);
+  const ladoDireitoFases = FASES_LADO.map((fase) => {
+    const lista = filtrarFase(fase.match);
+    const meio = Math.ceil(lista.length / 2);
+    return {
+      ...fase,
+      esquerda: lista.slice(0, meio),
+      direita: lista.slice(meio),
+    };
+  });
+
+  const finais = filtrarFase((f) => /^final$|^grande final/i.test(f));
+  const terceiros = filtrarFase((f) => /terceiro|3.*lugar/i.test(f));
+
+  const temAlgum =
+    ladoDireitoFases.some((f) => f.esquerda.length + f.direita.length > 0) ||
+    finais.length + terceiros.length > 0;
+
   if (!temAlgum) {
     return (
       <div
@@ -411,21 +430,20 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
     );
   }
 
+  // Esconde colunas (Segunda/Oitavas/etc) totalmente vazias
+  const colunasVisiveis = ladoDireitoFases.filter(
+    (f) => f.esquerda.length + f.direita.length > 0,
+  );
+
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; left: number; top: number; moved: boolean } | null>(null);
   const [arrastando, setArrastando] = useState(false);
 
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== "mouse") return; // mobile: usa scroll nativo
+    if (e.pointerType !== "mouse") return;
     const el = ref.current;
     if (!el) return;
-    drag.current = {
-      x: e.clientX,
-      y: e.clientY,
-      left: el.scrollLeft,
-      top: el.scrollTop,
-      moved: false,
-    };
+    drag.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop, moved: false };
     setArrastando(true);
   };
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -464,35 +482,116 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
       }`}
       style={{ touchAction: "pan-x pan-y", overscrollBehaviorX: "contain" }}
     >
+      <div className="flex items-stretch gap-2 min-w-max py-2">
+        {/* LADO ESQUERDO */}
+        {colunasVisiveis.map((fase) => (
+          <ColunaBracket
+            key={`L-${fase.key}`}
+            label={fase.label}
+            jogos={fase.esquerda}
+            lado="esquerda"
+          />
+        ))}
 
-      <div className="flex gap-4 min-w-max">
-        {porFase.map((fase) => (
-          <div key={fase.key} className="flex flex-col gap-3 w-64 shrink-0">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-accent text-center">
-              {fase.label}
+        {/* CENTRO: FINAL + 3º LUGAR */}
+        <div className="w-56 shrink-0 flex flex-col items-center justify-between gap-4 px-1">
+          <div className="w-full">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-center mb-2 text-accent">
+              Final
             </h3>
-            <div
-              className="flex-1 flex flex-col justify-around gap-3"
-              style={{ minHeight: 480 }}
-            >
-              {fase.lista.length === 0 && (
-                <div className="rounded-xl p-4 text-center text-xs text-muted-foreground border border-dashed border-white/10">
-                  A definir
-                </div>
-              )}
-              {fase.lista.map((j) => (
-                <BracketCard key={j.id} jogo={j} />
-              ))}
-            </div>
+            {finais.length === 0 ? (
+              <SlotVazio destaque />
+            ) : (
+              finais.map((j) => <BracketCard key={j.id} jogo={j} destaque />)
+            )}
           </div>
+          <div className="w-full">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-center mb-2 text-muted-foreground">
+              3º Lugar
+            </h3>
+            {terceiros.length === 0 ? (
+              <SlotVazio />
+            ) : (
+              terceiros.map((j) => <BracketCard key={j.id} jogo={j} />)
+            )}
+          </div>
+        </div>
+
+        {/* LADO DIREITO (espelhado) */}
+        {[...colunasVisiveis].reverse().map((fase) => (
+          <ColunaBracket
+            key={`R-${fase.key}`}
+            label={fase.label}
+            jogos={fase.direita}
+            lado="direita"
+          />
         ))}
       </div>
     </div>
   );
 }
 
+function ColunaBracket({
+  label,
+  jogos,
+  lado,
+}: {
+  label: string;
+  jogos: Jogo[];
+  lado: "esquerda" | "direita";
+}) {
+  // Número de slots = max(jogos.length, 1), distribui igualmente
+  const slots = jogos.length === 0 ? [null] : jogos;
+  return (
+    <div className="w-44 sm:w-52 shrink-0 flex flex-col">
+      <h3 className="text-[11px] font-bold uppercase tracking-wider text-accent text-center mb-2">
+        {label}
+      </h3>
+      <div className="flex-1 flex flex-col justify-around gap-2" style={{ minHeight: 520 }}>
+        {slots.map((j, i) =>
+          j ? (
+            <div
+              key={j.id}
+              className={`flex items-center ${lado === "direita" ? "flex-row-reverse" : ""}`}
+            >
+              <div className="flex-1 min-w-0">
+                <BracketCard jogo={j} />
+              </div>
+              <div className="w-2 h-px bg-white/20 shrink-0" />
+            </div>
+          ) : (
+            <div
+              key={i}
+              className={`flex items-center ${lado === "direita" ? "flex-row-reverse" : ""}`}
+            >
+              <div className="flex-1 min-w-0">
+                <SlotVazio />
+              </div>
+              <div className="w-2 h-px bg-white/20 shrink-0" />
+            </div>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
 
-function BracketCard({ jogo: j }: { jogo: Jogo }) {
+function SlotVazio({ destaque = false }: { destaque?: boolean }) {
+  return (
+    <div
+      className={`rounded-xl px-3 py-4 text-center text-[11px] text-muted-foreground border border-dashed ${
+        destaque ? "border-accent/40" : "border-white/10"
+      }`}
+    >
+      A definir
+    </div>
+  );
+}
+
+
+
+
+function BracketCard({ jogo: j, destaque = false }: { jogo: Jogo; destaque?: boolean }) {
   const aoVivo = j.status === "ao_vivo";
   const placar =
     j.placar_mandante != null && j.placar_visitante != null
@@ -504,8 +603,11 @@ function BracketCard({ jogo: j }: { jogo: Jogo }) {
       params={{ id: j.id }}
       className="block rounded-xl p-3 transition hover:scale-[1.02]"
       style={{
-        background: "var(--glass-bg)",
-        border: `1px solid ${aoVivo ? "var(--destructive)" : "var(--glass-border)"}`,
+        background: destaque ? "var(--gradient-accent, var(--glass-bg))" : "var(--glass-bg)",
+        border: `1px solid ${
+          aoVivo ? "var(--destructive)" : destaque ? "var(--accent)" : "var(--glass-border)"
+        }`,
+        boxShadow: destaque ? "0 0 0 2px color-mix(in oklab, var(--accent) 30%, transparent)" : undefined,
       }}
     >
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2 flex items-center justify-between">
