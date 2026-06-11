@@ -26,6 +26,68 @@ function codigo(nome: string | null): string | null {
   return COUNTRY_CODES[nome] ?? null;
 }
 
+// TheSportsDB retorna nomes em inglês; o banco usa português.
+const TEAM_PT: Record<string, string> = {
+  Mexico: "México",
+  "South Africa": "África do Sul",
+  "South Korea": "Coreia do Sul",
+  Korea: "Coreia do Sul",
+  "Republic of Korea": "Coreia do Sul",
+  "Czech Republic": "Rep. Tcheca",
+  Czechia: "Rep. Tcheca",
+  Canada: "Canadá",
+  "Bosnia-Herzegovina": "Bósnia e Herzegovina",
+  "Bosnia and Herzegovina": "Bósnia e Herzegovina",
+  USA: "EUA",
+  "United States": "EUA",
+  Paraguay: "Paraguai",
+  Brazil: "Brasil",
+  Morocco: "Marrocos",
+  Qatar: "Catar",
+  Switzerland: "Suíça",
+  Haiti: "Haiti",
+  Scotland: "Escócia",
+  Germany: "Alemanha",
+  Curacao: "Curaçao",
+  "Curaçao": "Curaçao",
+  "Ivory Coast": "Costa do Marfim",
+  Ecuador: "Equador",
+  Netherlands: "Holanda",
+  Japan: "Japão",
+  Australia: "Austrália",
+  Turkey: "Turquia",
+  Belgium: "Bélgica",
+  Egypt: "Egito",
+  "Saudi Arabia": "Arábia Saudita",
+  Uruguay: "Uruguai",
+  Spain: "Espanha",
+  "Cape Verde": "Cabo Verde",
+  Sweden: "Suécia",
+  Tunisia: "Tunísia",
+  Argentina: "Argentina",
+  Algeria: "Argélia",
+  Colombia: "Colômbia",
+  Croatia: "Croácia",
+  England: "Inglaterra",
+  France: "França",
+  Ghana: "Gana",
+  Iran: "Irã",
+  Iraq: "Iraque",
+  Jordan: "Jordânia",
+  Norway: "Noruega",
+  "New Zealand": "Nova Zelândia",
+  Panama: "Panamá",
+  Portugal: "Portugal",
+  "DR Congo": "RD Congo",
+  Senegal: "Senegal",
+  Uzbekistan: "Uzbequistão",
+  Austria: "Áustria",
+};
+
+function nomePT(nome: string): string {
+  return TEAM_PT[nome] ?? nome;
+}
+
 function mapStatus(s: string | null, postponed: string | null): string {
   if (postponed === "yes") return "adiado";
   const x = (s ?? "").toUpperCase();
