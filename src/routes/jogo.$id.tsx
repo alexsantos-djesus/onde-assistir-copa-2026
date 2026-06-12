@@ -158,23 +158,25 @@ function isHttpUrl(s: string | null): s is string {
   } catch { return false; }
 }
 
-// Aceita: "URL", "Nome", "Nome, URL", "Nome - URL", "Nome (URL)"
-function parseStreaming(valor: string | null): { nome: string; url: string | null } | null {
+// Formato salvo: "Label|URL"  (ex.: "GloboPlay, CazéTV|https://...")
+// Compat: "Nome, URL" ou só URL ou só texto.
+function parseStreaming(valor: string | null): { label: string; url: string | null } | null {
   if (!valor) return null;
   const txt = valor.trim();
   if (!txt) return null;
-  const urlMatch = txt.match(/https?:\/\/[^\s,()]+/i);
-  const url = urlMatch ? urlMatch[0] : null;
-  let nome = url
-    ? txt.replace(url, "").replace(/^[,\-–—()\s]+|[,\-–—()\s]+$/g, "").trim()
-    : txt;
-  if (!nome && url) {
-    try {
-      const host = new URL(url).hostname.replace(/^www\./, "");
-      nome = host.endsWith("youtube.com") || host === "youtu.be" ? "CazéTV (YouTube)" : host;
-    } catch { nome = "Streaming"; }
+  const idx = txt.indexOf("|");
+  if (idx >= 0) {
+    const label = txt.slice(0, idx).trim();
+    const url = txt.slice(idx + 1).trim();
+    return { label: label || (url ? "Streaming" : ""), url: url || null };
   }
-  return { nome: nome || "Streaming", url };
+  const m = txt.match(/https?:\/\/\S+/i);
+  if (m) {
+    const url = m[0];
+    const label = txt.replace(url, "").replace(/^[,\-–—()\s]+|[,\-–—()\s]+$/g, "").trim();
+    return { label: label || "Streaming", url };
+  }
+  return { label: txt, url: null };
 }
 
 function InfoStreaming({ valor }: { valor: string | null }) {
