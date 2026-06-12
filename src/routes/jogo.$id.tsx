@@ -182,24 +182,42 @@ function parseStreaming(valor: string | null): { label: string; url: string | nu
 function InfoStreaming({ valor }: { valor: string | null }) {
   const p = parseStreaming(valor);
   if (!p) return <Info label="▶ Streaming" valor={null} />;
+  // Divide o label por vírgula. Se houver URL, o último item vira clicável.
+  const partes = p.label.split(",").map((s) => s.trim()).filter(Boolean);
   return (
     <div
       className="rounded-2xl p-4"
       style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
     >
       <div className="text-xs text-muted-foreground">▶ Streaming</div>
-      {p.url ? (
-        <a
-          href={p.url}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-1 font-semibold text-primary underline-offset-2 hover:underline break-words inline-block"
-        >
-          {p.nome}
-        </a>
-      ) : (
-        <div className="mt-1 font-semibold break-words">{p.nome}</div>
-      )}
+      <div className="mt-1 font-semibold break-words">
+        {partes.length === 0 && p.url ? (
+          <a href={p.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+            Assistir
+          </a>
+        ) : (
+          partes.map((parte, i) => {
+            const isUltimo = i === partes.length - 1;
+            const sep = i > 0 ? ", " : "";
+            if (isUltimo && p.url) {
+              return (
+                <span key={i}>
+                  {sep}
+                  <a
+                    href={p.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    {parte}
+                  </a>
+                </span>
+              );
+            }
+            return <span key={i}>{sep}{parte}</span>;
+          })
+        )}
+      </div>
     </div>
   );
 }
@@ -207,6 +225,8 @@ function InfoStreaming({ valor }: { valor: string | null }) {
 function BotaoTransmissao({ url, status }: { url: string | null; status: string | null }) {
   const p = parseStreaming(url);
   if (!p?.url) return null;
+  const partes = p.label.split(",").map((s) => s.trim()).filter(Boolean);
+  const nome = partes[partes.length - 1] || "transmissão";
   const ativo = status === "ao_vivo" || status === "intervalo";
   return (
     <a
@@ -215,7 +235,7 @@ function BotaoTransmissao({ url, status }: { url: string | null; status: string 
       rel="noreferrer"
       className="block w-full text-center rounded-2xl py-4 font-bold border border-white/10 hover:bg-white/5"
     >
-      {ativo ? `🔴 Assistir ao vivo · ${p.nome}` : `▶ Abrir ${p.nome}`}
+      {ativo ? `🔴 Assistir ao vivo · ${nome}` : `▶ Abrir ${nome}`}
     </a>
   );
 }
