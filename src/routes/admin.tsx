@@ -152,7 +152,16 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
   const [pm, setPm] = useState(jogo.placar_mandante?.toString() ?? "");
   const [pv, setPv] = useState(jogo.placar_visitante?.toString() ?? "");
   const [status, setStatus] = useState(jogo.status ?? "agendado");
-  const [streaming, setStreaming] = useState(jogo.streaming ?? "");
+  const parsedIni = (() => {
+    const raw = jogo.streaming ?? "";
+    const idx = raw.indexOf("|");
+    if (idx >= 0) return { label: raw.slice(0, idx), url: raw.slice(idx + 1) };
+    const m = raw.match(/https?:\/\/\S+/i);
+    if (m) return { label: raw.replace(m[0], "").replace(/[,\s\-–—]+$/g, "").trim(), url: m[0] };
+    return { label: raw, url: "" };
+  })();
+  const [streamLabel, setStreamLabel] = useState(parsedIni.label);
+  const [streamUrl, setStreamUrl] = useState(parsedIni.url);
   const [salvando, setSalvando] = useState(false);
   const [msg, setMsg] = useState<string>("");
 
