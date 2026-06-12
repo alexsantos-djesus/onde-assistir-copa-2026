@@ -130,6 +130,10 @@ function JogoPage() {
           <Info label="📍 Cidade" valor={j.cidade} />
         </section>
 
+        <PlayerTransmissao url={j.streaming} status={j.status} />
+
+
+
         <a
           href={waUrl}
           target="_blank"
