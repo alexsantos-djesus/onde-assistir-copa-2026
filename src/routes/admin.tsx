@@ -174,7 +174,12 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
         placar_mandante: pm === "" ? null : Number(pm),
         placar_visitante: pv === "" ? null : Number(pv),
         status,
-        streaming: streaming.trim() === "" ? null : streaming.trim().slice(0, 500),
+        streaming: (() => {
+          const l = streamLabel.trim();
+          const u = streamUrl.trim();
+          if (!l && !u) return null;
+          return (u ? `${l}|${u}` : l).slice(0, 500);
+        })(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", jogo.id);
