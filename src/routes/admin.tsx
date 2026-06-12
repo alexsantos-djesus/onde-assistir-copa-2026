@@ -152,7 +152,16 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
   const [pm, setPm] = useState(jogo.placar_mandante?.toString() ?? "");
   const [pv, setPv] = useState(jogo.placar_visitante?.toString() ?? "");
   const [status, setStatus] = useState(jogo.status ?? "agendado");
-  const [streaming, setStreaming] = useState(jogo.streaming ?? "");
+  const parsedIni = (() => {
+    const raw = jogo.streaming ?? "";
+    const idx = raw.indexOf("|");
+    if (idx >= 0) return { label: raw.slice(0, idx), url: raw.slice(idx + 1) };
+    const m = raw.match(/https?:\/\/\S+/i);
+    if (m) return { label: raw.replace(m[0], "").replace(/[,\s\-–—]+$/g, "").trim(), url: m[0] };
+    return { label: raw, url: "" };
+  })();
+  const [streamLabel, setStreamLabel] = useState(parsedIni.label);
+  const [streamUrl, setStreamUrl] = useState(parsedIni.url);
   const [salvando, setSalvando] = useState(false);
   const [msg, setMsg] = useState<string>("");
 
@@ -165,7 +174,12 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
         placar_mandante: pm === "" ? null : Number(pm),
         placar_visitante: pv === "" ? null : Number(pv),
         status,
-        streaming: streaming.trim() === "" ? null : streaming.trim().slice(0, 500),
+        streaming: (() => {
+          const l = streamLabel.trim();
+          const u = streamUrl.trim();
+          if (!l && !u) return null;
+          return (u ? `${l}|${u}` : l).slice(0, 500);
+        })(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", jogo.id);
@@ -214,18 +228,33 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
           <Bandeira code={jogo.bandeira_visitante ?? jogo.time_visitante} size={22} />
         </div>
       </div>
-      <div className="mt-2">
-        <label className="text-[10px] text-muted-foreground block mb-1">
-          Link de transmissão (YouTube/CazéTV — cola o link da live para embedar o player)
-        </label>
-        <input
-          type="url"
-          value={streaming}
-          onChange={(e) => setStreaming(e.target.value)}
-          placeholder="https://www.youtube.com/watch?v=..."
-          maxLength={500}
-          className="w-full rounded-md bg-background/40 border border-white/10 py-1 px-2 text-xs"
-        />
+      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] text-muted-foreground block mb-1">
+            Onde passa (texto exibido)
+          </label>
+          <input
+            type="text"
+            value={streamLabel}
+            onChange={(e) => setStreamLabel(e.target.value)}
+            placeholder="GloboPlay, CazéTV"
+            maxLength={200}
+            className="w-full rounded-md bg-background/40 border border-white/10 py-1 px-2 text-xs"
+          />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground block mb-1">
+            Link da CazéTV (clicável no público)
+          </label>
+          <input
+            type="url"
+            value={streamUrl}
+            onChange={(e) => setStreamUrl(e.target.value)}
+            placeholder="https://www.youtube.com/live/..."
+            maxLength={300}
+            className="w-full rounded-md bg-background/40 border border-white/10 py-1 px-2 text-xs"
+          />
+        </div>
       </div>
       <div className="flex items-center justify-between mt-2 gap-2">
         <select
