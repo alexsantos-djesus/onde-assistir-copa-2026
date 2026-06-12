@@ -133,6 +133,7 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
   const [pm, setPm] = useState(jogo.placar_mandante?.toString() ?? "");
   const [pv, setPv] = useState(jogo.placar_visitante?.toString() ?? "");
   const [status, setStatus] = useState(jogo.status ?? "agendado");
+  const [streaming, setStreaming] = useState(jogo.streaming ?? "");
   const [salvando, setSalvando] = useState(false);
   const [msg, setMsg] = useState<string>("");
 
@@ -145,6 +146,7 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
         placar_mandante: pm === "" ? null : Number(pm),
         placar_visitante: pv === "" ? null : Number(pv),
         status,
+        streaming: streaming.trim() === "" ? null : streaming.trim().slice(0, 500),
         updated_at: new Date().toISOString(),
       })
       .eq("id", jogo.id);
@@ -193,6 +195,19 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
           <Bandeira code={jogo.bandeira_visitante ?? jogo.time_visitante} size={22} />
         </div>
       </div>
+      <div className="mt-2">
+        <label className="text-[10px] text-muted-foreground block mb-1">
+          Link de transmissão (YouTube/CazéTV — cola o link da live para embedar o player)
+        </label>
+        <input
+          type="url"
+          value={streaming}
+          onChange={(e) => setStreaming(e.target.value)}
+          placeholder="https://www.youtube.com/watch?v=..."
+          maxLength={500}
+          className="w-full rounded-md bg-background/40 border border-white/10 py-1 px-2 text-xs"
+        />
+      </div>
       <div className="flex items-center justify-between mt-2 gap-2">
         <select
           value={status}
@@ -201,6 +216,7 @@ function LinhaAdmin({ jogo, onSalvar }: { jogo: Jogo; onSalvar: () => void }) {
         >
           <option value="agendado">Agendado</option>
           <option value="ao_vivo">Ao vivo</option>
+          <option value="intervalo">Intervalo</option>
           <option value="encerrado">Encerrado</option>
         </select>
         <div className="flex items-center gap-2">

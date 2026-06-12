@@ -130,6 +130,10 @@ function JogoPage() {
           <Info label="📍 Cidade" valor={j.cidade} />
         </section>
 
+        <PlayerTransmissao url={j.streaming} status={j.status} />
+
+
+
         <a
           href={waUrl}
           target="_blank"
@@ -141,6 +145,63 @@ function JogoPage() {
         </a>
       </main>
     </div>
+  );
+}
+
+function extractYoutubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") return u.pathname.slice(1).split("/")[0] || null;
+    if (host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
+      if (u.pathname === "/watch") return u.searchParams.get("v");
+      const m = u.pathname.match(/^\/(embed|live|shorts)\/([^/?#]+)/);
+      if (m) return m[2];
+    }
+  } catch { /* invalid url */ }
+  return null;
+}
+
+function PlayerTransmissao({ url, status }: { url: string | null; status: string | null }) {
+  if (!url) return null;
+  const ytId = extractYoutubeId(url);
+  const ativo = status === "ao_vivo" || status === "intervalo";
+  if (!ytId) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="block w-full text-center rounded-2xl py-3 font-semibold border border-white/10 hover:bg-white/5"
+      >
+        ▶ Abrir transmissão
+      </a>
+    );
+  }
+  return (
+    <section
+      className="rounded-2xl overflow-hidden"
+      style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+    >
+      <div className="px-4 pt-3 pb-2 text-xs text-muted-foreground flex items-center justify-between">
+        <span className="font-semibold text-foreground">
+          {ativo ? "🔴 Transmissão ao vivo" : "▶ Transmissão"}
+        </span>
+        <a href={url} target="_blank" rel="noreferrer" className="underline hover:text-foreground">
+          abrir no YouTube
+        </a>
+      </div>
+      <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+        <iframe
+          src={`https://www.youtube.com/embed/${encodeURIComponent(ytId)}?autoplay=0&rel=0`}
+          title="Transmissão do jogo"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+          className="absolute inset-0 w-full h-full border-0"
+        />
+      </div>
+    </section>
   );
 }
 
