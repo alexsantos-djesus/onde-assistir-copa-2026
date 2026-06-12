@@ -158,47 +158,62 @@ function isHttpUrl(s: string | null): s is string {
   } catch { return false; }
 }
 
-function nomeStreaming(url: string): string {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, "");
-    if (host.endsWith("youtube.com") || host === "youtu.be") return "CazéTV (YouTube)";
-    return host;
-  } catch { return "Streaming"; }
+// Aceita: "URL", "Nome", "Nome, URL", "Nome - URL", "Nome (URL)"
+function parseStreaming(valor: string | null): { nome: string; url: string | null } | null {
+  if (!valor) return null;
+  const txt = valor.trim();
+  if (!txt) return null;
+  const urlMatch = txt.match(/https?:\/\/[^\s,()]+/i);
+  const url = urlMatch ? urlMatch[0] : null;
+  let nome = url
+    ? txt.replace(url, "").replace(/^[,\-–—()\s]+|[,\-–—()\s]+$/g, "").trim()
+    : txt;
+  if (!nome && url) {
+    try {
+      const host = new URL(url).hostname.replace(/^www\./, "");
+      nome = host.endsWith("youtube.com") || host === "youtu.be" ? "CazéTV (YouTube)" : host;
+    } catch { nome = "Streaming"; }
+  }
+  return { nome: nome || "Streaming", url };
 }
 
 function InfoStreaming({ valor }: { valor: string | null }) {
-  if (isHttpUrl(valor)) {
-    return (
-      <div
-        className="rounded-2xl p-4"
-        style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
-      >
-        <div className="text-xs text-muted-foreground">▶ Streaming</div>
+  const p = parseStreaming(valor);
+  if (!p) return <Info label="▶ Streaming" valor={null} />;
+  return (
+    <div
+      className="rounded-2xl p-4"
+      style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+    >
+      <div className="text-xs text-muted-foreground">▶ Streaming</div>
+      {p.url ? (
         <a
-          href={valor}
+          href={p.url}
           target="_blank"
           rel="noreferrer"
-          className="mt-1 font-semibold text-primary underline-offset-2 hover:underline break-words"
+          className="mt-1 font-semibold text-primary underline-offset-2 hover:underline break-words inline-block"
         >
-          {nomeStreaming(valor)}
+          {p.nome}
         </a>
-      </div>
-    );
-  }
-  return <Info label="▶ Streaming" valor={valor} />;
+      ) : (
+        <div className="mt-1 font-semibold break-words">{p.nome}</div>
+      )}
+    </div>
+  );
 }
 
 function BotaoTransmissao({ url, status }: { url: string | null; status: string | null }) {
-  if (!isHttpUrl(url)) return null;
+  const p = parseStreaming(url);
+  if (!p?.url) return null;
   const ativo = status === "ao_vivo" || status === "intervalo";
   return (
     <a
-      href={url}
+      href={p.url}
       target="_blank"
       rel="noreferrer"
       className="block w-full text-center rounded-2xl py-4 font-bold border border-white/10 hover:bg-white/5"
     >
-      {ativo ? "🔴 Assistir ao vivo" : "▶ Abrir transmissão"}
+      {ativo ? `🔴 Assistir ao vivo · ${p.nome}` : `▶ Abrir ${p.nome}`}
     </a>
   );
 }
