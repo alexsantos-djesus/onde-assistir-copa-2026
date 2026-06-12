@@ -150,62 +150,59 @@ function JogoPage() {
   );
 }
 
-function extractYoutubeId(url: string): string | null {
+function isHttpUrl(s: string | null): s is string {
+  if (!s) return false;
   try {
-    const u = new URL(url);
-    const host = u.hostname.replace(/^www\./, "");
-    if (host === "youtu.be") return u.pathname.slice(1).split("/")[0] || null;
-    if (host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
-      if (u.pathname === "/watch") return u.searchParams.get("v");
-      const m = u.pathname.match(/^\/(embed|live|shorts)\/([^/?#]+)/);
-      if (m) return m[2];
-    }
-  } catch { /* invalid url */ }
-  return null;
+    const u = new URL(s);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch { return false; }
 }
 
-function PlayerTransmissao({ url, status }: { url: string | null; status: string | null }) {
-  if (!url) return null;
-  const ytId = extractYoutubeId(url);
-  const ativo = status === "ao_vivo" || status === "intervalo";
-  if (!ytId) {
+function nomeStreaming(url: string): string {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    if (host.endsWith("youtube.com") || host === "youtu.be") return "CazéTV (YouTube)";
+    return host;
+  } catch { return "Streaming"; }
+}
+
+function InfoStreaming({ valor }: { valor: string | null }) {
+  if (isHttpUrl(valor)) {
     return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        className="block w-full text-center rounded-2xl py-3 font-semibold border border-white/10 hover:bg-white/5"
+      <div
+        className="rounded-2xl p-4"
+        style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
       >
-        ▶ Abrir transmissão
-      </a>
-    );
-  }
-  return (
-    <section
-      className="rounded-2xl overflow-hidden"
-      style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
-    >
-      <div className="px-4 pt-3 pb-2 text-xs text-muted-foreground flex items-center justify-between">
-        <span className="font-semibold text-foreground">
-          {ativo ? "🔴 Transmissão ao vivo" : "▶ Transmissão"}
-        </span>
-        <a href={url} target="_blank" rel="noreferrer" className="underline hover:text-foreground">
-          abrir no YouTube
+        <div className="text-xs text-muted-foreground">▶ Streaming</div>
+        <a
+          href={valor}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1 font-semibold text-primary underline-offset-2 hover:underline break-words"
+        >
+          {nomeStreaming(valor)}
         </a>
       </div>
-      <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
-        <iframe
-          src={`https://www.youtube.com/embed/${encodeURIComponent(ytId)}?autoplay=0&rel=0`}
-          title="Transmissão do jogo"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-          className="absolute inset-0 w-full h-full border-0"
-        />
-      </div>
-    </section>
+    );
+  }
+  return <Info label="▶ Streaming" valor={valor} />;
+}
+
+function BotaoTransmissao({ url, status }: { url: string | null; status: string | null }) {
+  if (!isHttpUrl(url)) return null;
+  const ativo = status === "ao_vivo" || status === "intervalo";
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="block w-full text-center rounded-2xl py-4 font-bold border border-white/10 hover:bg-white/5"
+    >
+      {ativo ? "🔴 Assistir ao vivo" : "▶ Abrir transmissão"}
+    </a>
   );
 }
+
 
 function TimeBig({ nome, logo }: { nome: string; logo: string | null }) {
   return (
