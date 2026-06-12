@@ -19,6 +19,7 @@ function AdminPage() {
   const [senha, setSenha] = useState("");
   const [mostrar, setMostrar] = useState(false);
   const [erro, setErro] = useState("");
+  const [entrando, setEntrando] = useState(false);
 
   if (!autorizado) {
     return (
@@ -27,12 +28,18 @@ function AdminPage() {
         style={{ background: "var(--gradient-pitch)" }}
       >
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
+            setErro("");
+            setEntrando(true);
+            await new Promise((r) => setTimeout(r, 400));
             if (senha.trim().toLowerCase() === ADMIN_PASS.trim().toLowerCase()) {
               localStorage.setItem("admin_ok", "1");
               setAutorizado(true);
-            } else setErro("Senha incorreta");
+            } else {
+              setErro("Senha incorreta");
+              setEntrando(false);
+            }
           }}
           className="w-full max-w-sm rounded-2xl p-6 space-y-3"
           style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
@@ -44,22 +51,34 @@ function AdminPage() {
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               placeholder="Senha"
-              className="w-full rounded-lg px-3 py-2 pr-10 bg-background/40 border border-white/10 outline-none"
+              className="w-full rounded-lg px-3 py-2 pr-12 bg-background/40 border border-white/10 outline-none"
               autoFocus
+              disabled={entrando}
             />
             <button
               type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => setMostrar((v) => !v)}
               aria-label={mostrar ? "Ocultar senha" : "Mostrar senha"}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-lg"
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 px-2 py-1 text-muted-foreground hover:text-foreground text-lg leading-none"
             >
               {mostrar ? "🙈" : "👁️"}
             </button>
           </div>
-          <p className="text-[10px] text-muted-foreground">Dica: senha padrão é <code>copa2026</code></p>
           {erro && <p className="text-xs text-destructive">{erro}</p>}
-          <button className="w-full rounded-lg py-2 bg-primary text-primary-foreground font-semibold">
-            Entrar
+          <button
+            type="submit"
+            disabled={entrando || senha.length === 0}
+            className="w-full rounded-lg py-2 bg-primary text-primary-foreground font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {entrando ? (
+              <>
+                <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Entrando...
+              </>
+            ) : (
+              "Entrar"
+            )}
           </button>
         </form>
       </div>
