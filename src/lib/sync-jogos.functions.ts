@@ -7,14 +7,16 @@ const SPORTSDB_DAY = (d: string) =>
 
 const MIN_SYNC_INTERVAL_MS = 60_000;
 let lastSyncAt = 0;
-let lastSyncResult: {
+type SyncResult = {
   ok: boolean;
   total: number;
   inseridos: number;
   atualizados: number;
   erros: string[];
   timestamp: string;
-} | null = null;
+  skipped?: boolean;
+};
+let lastSyncResult: SyncResult | null = null;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -139,7 +141,15 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
   async () => {
     const nowMs = Date.now();
     if (lastSyncResult && nowMs - lastSyncAt < MIN_SYNC_INTERVAL_MS) {
-      return { ...lastSyncResult, skipped: true, timestamp: new Date().toISOString() };
+      return {
+        ok: lastSyncResult.ok,
+        total: lastSyncResult.total,
+        inseridos: lastSyncResult.inseridos,
+        atualizados: lastSyncResult.atualizados,
+        erros: lastSyncResult.erros,
+        skipped: true,
+        timestamp: new Date().toISOString(),
+      };
     }
 
     const SUPABASE_URL =
