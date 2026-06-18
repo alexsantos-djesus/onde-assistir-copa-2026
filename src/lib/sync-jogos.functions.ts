@@ -209,9 +209,37 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       .select("id, time_mandante, time_visitante, data_hora, placar_mandante, placar_visitante");
     if (errSel) throw errSel;
 
+    const existingGames = (existentes ?? []) as ExistingGame[];
+    const eventKeys = new Set(
+      events.map(
+        (e) => `${nomePT(e.strHomeTeam)}|${nomePT(e.strAwayTeam)}|${(e.strTimestamp ?? e.dateEvent ?? "").slice(0, 10)}`,
+      ),
+    );
+
+    for (const jogo of existingGames) {
+      const gameDate = (jogo.data_hora ?? "").slice(0, 10);
+      if (!gameDate) continue;
+      if (new Date(gameDate).getTime() > Date.now()) continue;
+      if (eventKeys.has(`${jogo.time_mandante}|${jogo.time_visitante}|${gameDate}`)) continue;
+
+      try {
+        const found = await fetchSearchEvent(jogo.time_mandante, jogo.time_visitante);
+        for (const ev of found) {
+          if (seen.has(ev.idEvent)) continue;
+          const evDate = (ev.strTimestamp ?? ev.dateEvent ?? "").slice(0, 10);
+          if (evDate && evDate !== gameDate) continue;
+          seen.add(ev.idEvent);
+          events.push(ev);
+        }
+        await wait(50);
+      } catch {
+        // ignora falha de busca específica
+      }
+    }
+
     const byKey = new Map<string, { id: string; pm: number | null; pv: number | null }>();
     const byTimes = new Map<string, { id: string; pm: number | null; pv: number | null }>();
-    for (const j of existentes ?? []) {
+    for (const j of existingGames) {
       const k = `${j.time_mandante}|${j.time_visitante}|${(j.data_hora ?? "").slice(0, 10)}`;
       const v = { id: j.id, pm: j.placar_mandante, pv: j.placar_visitante };
       byKey.set(k, v);
