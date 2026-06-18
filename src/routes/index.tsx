@@ -178,6 +178,7 @@ function HomePage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["jogos"],
     queryFn: async () => {
+      await fetch("/api/public/sync-jogos", { cache: "no-store" }).catch(() => null);
       const { data, error } = await supabase
         .from("jogos")
         .select("*")
