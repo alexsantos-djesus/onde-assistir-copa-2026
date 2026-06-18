@@ -185,6 +185,9 @@ function HomePage() {
       if (error) throw error;
       return ((data ?? []) as Jogo[]).map(comStatusEfetivo);
     },
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 
   const jogos = (data ?? []).filter((j) => {
