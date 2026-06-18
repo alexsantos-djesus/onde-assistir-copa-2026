@@ -5,6 +5,19 @@ import { COUNTRY_CODES } from "./country-codes";
 const SPORTSDB_DAY = (d: string) =>
   `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${d}&l=4429`;
 
+const MIN_SYNC_INTERVAL_MS = 60_000;
+let lastSyncAt = 0;
+let lastSyncResult: {
+  ok: boolean;
+  total: number;
+  inseridos: number;
+  atualizados: number;
+  erros: string[];
+  timestamp: string;
+} | null = null;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function rangeDates(daysBack: number, daysForward: number): string[] {
   const out: string[] = [];
   const now = new Date();
@@ -124,6 +137,11 @@ function mapFase(round: string | null): string | null {
 
 export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
   async () => {
+    const nowMs = Date.now();
+    if (lastSyncResult && nowMs - lastSyncAt < MIN_SYNC_INTERVAL_MS) {
+      return { ...lastSyncResult, skipped: true, timestamp: new Date().toISOString() };
+    }
+
     const SUPABASE_URL =
       process.env.SUPABASE_URL ||
       process.env.VITE_SUPABASE_URL ||
@@ -141,7 +159,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
     const seen = new Set<string>();
     for (const d of dates) {
       try {
-        const r = await fetch(SPORTSDB_DAY(d));
+        const r = await fetch(SPORTSDB_DAY(d), { cache: "no-store" });
         if (!r.ok) continue;
         const j = (await r.json()) as { events: SportsDBEvent[] | null };
         for (const ev of j.events ?? []) {
@@ -149,6 +167,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
           seen.add(ev.idEvent);
           events.push(ev);
         }
+        await wait(50);
       } catch {
         // ignora falha de um dia
       }
