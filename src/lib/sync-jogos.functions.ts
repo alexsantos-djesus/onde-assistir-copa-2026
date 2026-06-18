@@ -2,8 +2,19 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { COUNTRY_CODES } from "./country-codes";
 
-const SPORTSDB_URL =
-  "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4429&s=2026";
+const SPORTSDB_DAY = (d: string) =>
+  `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${d}&l=4429`;
+
+function rangeDates(daysBack: number, daysForward: number): string[] {
+  const out: string[] = [];
+  const now = new Date();
+  for (let i = -daysBack; i <= daysForward; i++) {
+    const d = new Date(now);
+    d.setUTCDate(d.getUTCDate() + i);
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
 
 type SportsDBEvent = {
   idEvent: string;
@@ -125,10 +136,23 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFib2xraHpjYmJjdWZ4dnhwamxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwODA5OTUsImV4cCI6MjA5NjY1Njk5NX0.eRPeB9QIQ9aN_qG3Uq4NNdVUsK8aPgoPO-f4JPOhskc";
     const supabase = createClient(SUPABASE_URL, KEY);
 
-    const res = await fetch(SPORTSDB_URL);
-    if (!res.ok) throw new Error(`TheSportsDB falhou: ${res.status}`);
-    const json = (await res.json()) as { events: SportsDBEvent[] | null };
-    const events = json.events ?? [];
+    const dates = rangeDates(10, 21);
+    const events: SportsDBEvent[] = [];
+    const seen = new Set<string>();
+    for (const d of dates) {
+      try {
+        const r = await fetch(SPORTSDB_DAY(d));
+        if (!r.ok) continue;
+        const j = (await r.json()) as { events: SportsDBEvent[] | null };
+        for (const ev of j.events ?? []) {
+          if (seen.has(ev.idEvent)) continue;
+          seen.add(ev.idEvent);
+          events.push(ev);
+        }
+      } catch {
+        // ignora falha de um dia
+      }
+    }
 
     // Busca jogos existentes (todos) para deduplicar
     const { data: existentes, error: errSel } = await supabase
