@@ -5,6 +5,9 @@ import { COUNTRY_CODES } from "./country-codes";
 const SPORTSDB_DAY = (d: string) =>
   `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${d}&l=4429`;
 
+const SPORTSDB_SEARCH_EVENT = (home: string, away: string) =>
+  `https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=${encodeURIComponent(`${home}_vs_${away}`)}`;
+
 const MIN_SYNC_INTERVAL_MS = 60_000;
 let lastSyncAt = 0;
 
@@ -23,8 +26,10 @@ function rangeDates(daysBack: number, daysForward: number): string[] {
 
 type SportsDBEvent = {
   idEvent: string;
+  idLeague?: string | null;
   strHomeTeam: string;
   strAwayTeam: string;
+  strSeason?: string | null;
   strTimestamp: string | null;
   dateEvent: string | null;
   strTime: string | null;
@@ -35,6 +40,15 @@ type SportsDBEvent = {
   intRound: string | null;
   strStatus: string | null;
   strPostponed: string | null;
+};
+
+type ExistingGame = {
+  id: string;
+  time_mandante: string;
+  time_visitante: string;
+  data_hora: string | null;
+  placar_mandante: number | null;
+  placar_visitante: number | null;
 };
 
 function codigo(nome: string | null): string | null {
