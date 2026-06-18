@@ -118,6 +118,22 @@ function nomePT(nome: string): string {
   return TEAM_PT[nome] ?? nome;
 }
 
+function nomeEN(nome: string): string {
+  const hit = Object.entries(TEAM_PT).find(([, pt]) => pt === nome);
+  return hit?.[0] ?? nome;
+}
+
+async function fetchSearchEvent(homePt: string, awayPt: string): Promise<SportsDBEvent[]> {
+  const home = nomeEN(homePt);
+  const away = nomeEN(awayPt);
+  const r = await fetch(SPORTSDB_SEARCH_EVENT(home, away), { cache: "no-store" });
+  if (!r.ok) return [];
+  const j = (await r.json()) as { event?: SportsDBEvent[] | null };
+  return (j.event ?? []).filter(
+    (e) => e.idLeague === "4429" && (e.strSeason == null || e.strSeason === "2026"),
+  );
+}
+
 function mapStatus(s: string | null, postponed: string | null): string {
   if (postponed === "yes") return "adiado";
   const x = (s ?? "").toUpperCase();
