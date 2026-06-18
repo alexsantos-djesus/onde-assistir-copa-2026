@@ -7,16 +7,6 @@ const SPORTSDB_DAY = (d: string) =>
 
 const MIN_SYNC_INTERVAL_MS = 60_000;
 let lastSyncAt = 0;
-type SyncResult = {
-  ok: boolean;
-  total: number;
-  inseridos: number;
-  atualizados: number;
-  erros: string[];
-  timestamp: string;
-  skipped?: boolean;
-};
-let lastSyncResult: SyncResult | null = null;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -140,13 +130,13 @@ function mapFase(round: string | null): string | null {
 export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
   async () => {
     const nowMs = Date.now();
-    if (lastSyncResult && nowMs - lastSyncAt < MIN_SYNC_INTERVAL_MS) {
+    if (nowMs - lastSyncAt < MIN_SYNC_INTERVAL_MS) {
       return {
-        ok: lastSyncResult.ok,
-        total: lastSyncResult.total,
-        inseridos: lastSyncResult.inseridos,
-        atualizados: lastSyncResult.atualizados,
-        erros: lastSyncResult.erros,
+        ok: true,
+        total: 0,
+        inseridos: 0,
+        atualizados: 0,
+        erros: [],
         skipped: true,
         timestamp: new Date().toISOString(),
       };
