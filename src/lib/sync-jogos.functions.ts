@@ -253,7 +253,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       }
     }
 
-    return {
+    const result = {
       ok: erros.length === 0,
       total: events.length,
       inseridos,
@@ -261,5 +261,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       erros: erros.slice(0, 5),
       timestamp: new Date().toISOString(),
     };
+    lastSyncAt = Date.now();
+    return result;
   },
 );
