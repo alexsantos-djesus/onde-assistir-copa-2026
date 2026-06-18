@@ -2,8 +2,19 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { COUNTRY_CODES } from "./country-codes";
 
-const SPORTSDB_URL =
-  "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4429&s=2026";
+const SPORTSDB_DAY = (d: string) =>
+  `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${d}&l=4429`;
+
+function rangeDates(daysBack: number, daysForward: number): string[] {
+  const out: string[] = [];
+  const now = new Date();
+  for (let i = -daysBack; i <= daysForward; i++) {
+    const d = new Date(now);
+    d.setUTCDate(d.getUTCDate() + i);
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
 
 type SportsDBEvent = {
   idEvent: string;
