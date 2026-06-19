@@ -5,6 +5,8 @@ import { COUNTRY_CODES } from "./country-codes";
 const SPORTSDB_DAY = (d: string) =>
   `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${d}&l=4429`;
 
+const SPORTSDB_PAST_LEAGUE = "https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4429";
+
 const SPORTSDB_SEARCH_EVENT = (home: string, away: string) =>
   `https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=${encodeURIComponent(`${home}_vs_${away}`)}`;
 
@@ -197,7 +199,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
           seen.add(ev.idEvent);
           events.push(ev);
         }
-        await wait(50);
+        await wait(120);
       } catch {
         // ignora falha de um dia
       }
@@ -220,6 +222,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       const gameDate = (jogo.data_hora ?? "").slice(0, 10);
       if (!gameDate) continue;
       if (new Date(gameDate).getTime() > Date.now()) continue;
+      if (jogo.placar_mandante != null && jogo.placar_visitante != null) continue;
       if (eventKeys.has(`${jogo.time_mandante}|${jogo.time_visitante}|${gameDate}`)) continue;
 
       try {
@@ -231,7 +234,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
           seen.add(ev.idEvent);
           events.push(ev);
         }
-        await wait(50);
+        await wait(300);
       } catch {
         // ignora falha de busca específica
       }
