@@ -189,6 +189,20 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
     const dates = rangeDates(10, 21);
     const events: SportsDBEvent[] = [];
     const seen = new Set<string>();
+    try {
+      const r = await fetch(SPORTSDB_PAST_LEAGUE, { cache: "no-store" });
+      if (r.ok) {
+        const j = (await r.json()) as { events: SportsDBEvent[] | null };
+        for (const ev of j.events ?? []) {
+          if (seen.has(ev.idEvent)) continue;
+          seen.add(ev.idEvent);
+          events.push(ev);
+        }
+      }
+      await wait(120);
+    } catch {
+      // ignora falha da lista de jogos recentes
+    }
     for (const d of dates) {
       try {
         const r = await fetch(SPORTSDB_DAY(d), { cache: "no-store" });
@@ -221,7 +235,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
     for (const jogo of existingGames) {
       const gameDate = (jogo.data_hora ?? "").slice(0, 10);
       if (!gameDate) continue;
-      if (new Date(gameDate).getTime() > Date.now()) continue;
+      if (new Date(jogo.data_hora ?? gameDate).getTime() > Date.now()) continue;
       if (jogo.placar_mandante != null && jogo.placar_visitante != null) continue;
       if (eventKeys.has(`${jogo.time_mandante}|${jogo.time_visitante}|${gameDate}`)) continue;
 
