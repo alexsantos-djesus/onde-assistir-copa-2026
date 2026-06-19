@@ -173,26 +173,11 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFib2xraHpjYmJjdWZ4dnhwamxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwODA5OTUsImV4cCI6MjA5NjY1Njk5NX0.eRPeB9QIQ9aN_qG3Uq4NNdVUsK8aPgoPO-f4JPOhskc";
     const supabase = createClient(SUPABASE_URL, KEY);
 
-    const dates = rangeDates(10, 21);
     const events: SportsDBEvent[] = [];
     const seen = new Set<string>();
-    try {
-      const r = await fetch(SPORTSDB_PAST_LEAGUE, { cache: "no-store" });
-      if (r.ok) {
-        const j = (await r.json()) as { events: SportsDBEvent[] | null };
-        for (const ev of j.events ?? []) {
-          if (seen.has(ev.idEvent)) continue;
-          seen.add(ev.idEvent);
-          events.push(ev);
-        }
-      }
-      await wait(120);
-    } catch {
-      // ignora falha da lista de jogos recentes
-    }
-    for (const d of dates) {
+    for (const url of [SPORTSDB_PAST_LEAGUE, SPORTSDB_NEXT_LEAGUE]) {
       try {
-        const r = await fetch(SPORTSDB_DAY(d), { cache: "no-store" });
+        const r = await fetch(url, { cache: "no-store" });
         if (!r.ok) continue;
         const j = (await r.json()) as { events: SportsDBEvent[] | null };
         for (const ev of j.events ?? []) {
@@ -202,7 +187,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
         }
         await wait(120);
       } catch {
-        // ignora falha de um dia
+        // ignora falha de uma lista
       }
     }
 
