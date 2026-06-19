@@ -2,10 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { COUNTRY_CODES } from "./country-codes";
 
-const SPORTSDB_DAY = (d: string) =>
-  `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${d}&l=4429`;
-
 const SPORTSDB_PAST_LEAGUE = "https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4429";
+const SPORTSDB_NEXT_LEAGUE = "https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4429";
 
 const SPORTSDB_SEARCH_EVENT = (home: string, away: string) =>
   `https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=${encodeURIComponent(`${home}_vs_${away}`)}`;
@@ -14,17 +12,6 @@ const MIN_SYNC_INTERVAL_MS = 60_000;
 let lastSyncAt = 0;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function rangeDates(daysBack: number, daysForward: number): string[] {
-  const out: string[] = [];
-  const now = new Date();
-  for (let i = -daysBack; i <= daysForward; i++) {
-    const d = new Date(now);
-    d.setUTCDate(d.getUTCDate() + i);
-    out.push(d.toISOString().slice(0, 10));
-  }
-  return out;
-}
 
 type SportsDBEvent = {
   idEvent: string;
