@@ -321,4 +321,165 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
     lastSyncAt = Date.now();
     return result;
   },
-);
+
+type JogoLite = {
+  id: string;
+  fase: string | null;
+  data_hora: string;
+  status: string | null;
+  time_mandante: string;
+  time_visitante: string;
+  bandeira_mandante: string | null;
+  bandeira_visitante: string | null;
+  placar_mandante: number | null;
+  placar_visitante: number | null;
+};
+
+const PLACEHOLDER_RE =
+  /^(?:[12]º\s*Grupo|3º\s*Grupo|Vencedor\s+(?:oitavas|quartas|semi)|Perdedor\s+semi)\b/i;
+
+function isPlaceholder(t: string): boolean {
+  return PLACEHOLDER_RE.test(t);
+}
+
+type SupabaseClientLike = ReturnType<typeof createClient>;
+
+async function resolverChaveamento(supabase: SupabaseClientLike): Promise<number> {
+  const { data } = await supabase
+    .from("jogos")
+    .select(
+      "id, fase, data_hora, status, time_mandante, time_visitante, bandeira_mandante, bandeira_visitante, placar_mandante, placar_visitante",
+    )
+    .order("data_hora", { ascending: true });
+  const all = (data ?? []) as JogoLite[];
+  if (all.length === 0) return 0;
+
+  // Top 1/2 por grupo (quando todos os 6 jogos do grupo estão encerrados)
+  const grupos: Record<string, JogoLite[]> = {};
+  for (const j of all) {
+    const m = (j.fase ?? "").match(/grupo\s*([a-l])/i);
+    if (!m) continue;
+    (grupos[m[1].toUpperCase()] ??= []).push(j);
+  }
+
+  type Linha = { time: string; bandeira: string | null; pts: number; sg: number; gp: number; gc: number };
+  const top: Record<string, Linha[]> = {};
+  for (const [g, lista] of Object.entries(grupos)) {
+    const fim = lista.filter(
+      (j) => j.status === "encerrado" && j.placar_mandante != null && j.placar_visitante != null,
+    );
+    if (fim.length < 6) continue;
+    const stats = new Map<string, Linha>();
+    const ens = (n: string, b: string | null) => {
+      let l = stats.get(n);
+      if (!l) {
+        l = { time: n, bandeira: b, pts: 0, sg: 0, gp: 0, gc: 0 };
+        stats.set(n, l);
+      } else if (!l.bandeira && b) l.bandeira = b;
+      return l;
+    };
+    for (const j of fim) {
+      const a = ens(j.time_mandante, j.bandeira_mandante);
+      const b = ens(j.time_visitante, j.bandeira_visitante);
+      a.gp += j.placar_mandante!; a.gc += j.placar_visitante!;
+      b.gp += j.placar_visitante!; b.gc += j.placar_mandante!;
+      if (j.placar_mandante! > j.placar_visitante!) a.pts += 3;
+      else if (j.placar_mandante! < j.placar_visitante!) b.pts += 3;
+      else { a.pts++; b.pts++; }
+    }
+    const tabela = [...stats.values()]
+      .map((l) => ({ ...l, sg: l.gp - l.gc }))
+      .sort(
+        (x, y) =>
+          y.pts - x.pts ||
+          y.sg - x.sg ||
+          y.gp - x.gp ||
+          x.time.localeCompare(y.time),
+      );
+    top[g] = tabela;
+  }
+
+  const oitavas = all.filter((j) => /oitava/i.test(j.fase ?? ""));
+  const quartas = all.filter((j) => /quart/i.test(j.fase ?? ""));
+  const semis = all.filter((j) => /semi/i.test(j.fase ?? ""));
+
+  const winnerOf = (j: JogoLite) => {
+    if (j.status !== "encerrado" || j.placar_mandante == null || j.placar_visitante == null) return null;
+    if (j.placar_mandante > j.placar_visitante)
+      return { time: j.time_mandante, bandeira: j.bandeira_mandante };
+    if (j.placar_mandante < j.placar_visitante)
+      return { time: j.time_visitante, bandeira: j.bandeira_visitante };
+    return null;
+  };
+  const loserOf = (j: JogoLite) => {
+    if (j.status !== "encerrado" || j.placar_mandante == null || j.placar_visitante == null) return null;
+    if (j.placar_mandante < j.placar_visitante)
+      return { time: j.time_mandante, bandeira: j.bandeira_mandante };
+    if (j.placar_mandante > j.placar_visitante)
+      return { time: j.time_visitante, bandeira: j.bandeira_visitante };
+    return null;
+  };
+
+  const resolveSlot = (nome: string): { time: string; bandeira: string | null } | null => {
+    let m: RegExpMatchArray | null;
+    if ((m = nome.match(/^([12])º\s*Grupo\s*([A-L])$/i))) {
+      const t = top[m[2].toUpperCase()];
+      if (t && t[Number(m[1]) - 1]) {
+        const l = t[Number(m[1]) - 1];
+        return { time: l.time, bandeira: l.bandeira };
+      }
+    }
+    if ((m = nome.match(/^Vencedor\s+oitavas\s+(\d+)$/i))) {
+      const j = oitavas[Number(m[1]) - 1];
+      if (j) return winnerOf(j);
+    }
+    if ((m = nome.match(/^Vencedor\s+quartas\s+(\d+)$/i))) {
+      const j = quartas[Number(m[1]) - 1];
+      if (j) return winnerOf(j);
+    }
+    if ((m = nome.match(/^Vencedor\s+semi\s+(\d+)$/i))) {
+      const j = semis[Number(m[1]) - 1];
+      if (j) return winnerOf(j);
+    }
+    if ((m = nome.match(/^Perdedor\s+semi\s+(\d+)$/i))) {
+      const j = semis[Number(m[1]) - 1];
+      if (j) return loserOf(j);
+    }
+    return null;
+  };
+
+  let total = 0;
+  // várias passadas para propagar (grupos → oitavas → quartas → semi → final/3º)
+  for (let pass = 0; pass < 5; pass++) {
+    let changed = false;
+    for (const j of all) {
+      if (!j.fase) continue;
+      const patch: Record<string, unknown> = {};
+      if (isPlaceholder(j.time_mandante)) {
+        const r = resolveSlot(j.time_mandante);
+        if (r && r.time && r.time !== j.time_mandante) {
+          patch.time_mandante = r.time;
+          patch.bandeira_mandante = r.bandeira ?? codigo(r.time);
+        }
+      }
+      if (isPlaceholder(j.time_visitante)) {
+        const r = resolveSlot(j.time_visitante);
+        if (r && r.time && r.time !== j.time_visitante) {
+          patch.time_visitante = r.time;
+          patch.bandeira_visitante = r.bandeira ?? codigo(r.time);
+        }
+      }
+      if (Object.keys(patch).length > 0) {
+        const { error } = await supabase.from("jogos").update(patch).eq("id", j.id);
+        if (!error) {
+          Object.assign(j, patch);
+          total++;
+          changed = true;
+        }
+      }
+    }
+    if (!changed) break;
+  }
+  return total;
+}
+
