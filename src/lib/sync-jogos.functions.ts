@@ -347,7 +347,7 @@ function isPlaceholder(t: string): boolean {
 
 type SupabaseClientLike = ReturnType<typeof createClient>;
 
-async function resolverChaveamento(supabase: SupabaseClientLike): Promise<number> {
+async function resolverChaveamento(supabase: any): Promise<number> {
   const { data } = await supabase
     .from("jogos")
     .select(
