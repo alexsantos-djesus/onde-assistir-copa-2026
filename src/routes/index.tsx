@@ -214,6 +214,7 @@ function HomePage() {
     if (faseSel !== "todas") {
       const f = normalizar(j.fase ?? "");
       if (faseSel === "grupos" && !f.includes("grupo")) return false;
+      if (faseSel === "dezesseis" && !f.includes("16avos") && !f.includes("16 avos")) return false;
       if (faseSel === "oitavas" && !f.includes("oitava")) return false;
       if (faseSel === "quartas" && !f.includes("quart")) return false;
       if (faseSel === "semi" && !f.includes("semi")) return false;
@@ -304,6 +305,7 @@ function HomePage() {
                 [
                   ["todas", "Todas fases"],
                   ["grupos", "Fase de grupos"],
+                  ["dezesseis", "16avos"],
                   ["oitavas", "Oitavas"],
                   ["quartas", "Quartas"],
                   ["semi", "Semifinal"],
@@ -413,7 +415,8 @@ const FASES_LADO: FaseDef[] = [
     label: "Segunda Fase",
     match: (f) => /segunda|round of 32|32-?avos|playoff/i.test(f),
   },
-  { key: "oitavas", label: "Oitavas de Final", match: (f) => /oitava|round of 16|16-?avos/i.test(f) },
+  { key: "dezesseis", label: "16avos de Final", match: (f) => /16\s*avos|16-?avos|round of 32/i.test(f) },
+  { key: "oitavas", label: "Oitavas de Final", match: (f) => /oitava|round of 16/i.test(f) },
   { key: "quartas", label: "Quartas de Final", match: (f) => /quart/i.test(f) },
   { key: "semi", label: "Semifinal", match: (f) => /semi/i.test(f) },
 ];

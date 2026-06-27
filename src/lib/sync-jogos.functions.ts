@@ -132,16 +132,18 @@ function mapStatus(s: string | null, postponed: string | null): string {
   return "agendado";
 }
 
-function mapFase(round: string | null): string | null {
+function mapFase(round: string | null, dataHora?: string | null): string | null {
   if (!round) return null;
   const n = Number(round);
   if (!Number.isFinite(n)) return round;
-  // TheSportsDB usa rounds 1-3 para fase de grupos, depois 16/8/4/2/1
-  if (n >= 1 && n <= 3) return `Fase de Grupos - Rodada ${n}`;
-  if (n === 16 || n === 125) return "Oitavas de Final";
-  if (n === 8 || n === 150) return "Quartas de Final";
-  if (n === 4 || n === 180) return "Semifinal";
-  if (n === 2 || n === 200) return "Disputa de 3º Lugar";
+  const isMataMata = dataHora ? new Date(dataHora).getTime() >= Date.UTC(2026, 5, 28) : false;
+  // No formato 2026: 32 classificados começam em 16avos; depois oitavas, quartas, semi e final.
+  if (!isMataMata && n >= 1 && n <= 3) return `Fase de Grupos - Rodada ${n}`;
+  if (n === 16 || n === 125) return "16avos de Final";
+  if (n === 8 || n === 150) return "Oitavas de Final";
+  if (n === 4 || n === 180) return "Quartas de Final";
+  if (n === 2) return "Semifinal";
+  if (n === 200) return "Disputa de 3º Lugar";
   if (n === 1 || n === 250) return "Final";
   return `Rodada ${n}`;
 }
@@ -289,7 +291,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
           bandeira_visitante: codigo(e.strAwayTeam),
           estadio: e.strVenue,
           cidade: e.strCountry,
-          fase: mapFase(e.intRound),
+          fase: mapFase(e.intRound, dataHora),
           status,
           placar_mandante: placarM,
           placar_visitante: placarV,
@@ -300,7 +302,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       }
     }
 
-    // Resolve chaveamento: substitui placeholders ("1º Grupo A", "Vencedor oitavas 3", etc)
+    // Resolve chaveamento: substitui placeholders ("1º Grupo A", "Vencedor 16avos 3", etc)
     // pelos times reais quando já é possível determinar.
     let resolvidos = 0;
     try {
@@ -339,7 +341,12 @@ type JogoLite = {
 };
 
 const PLACEHOLDER_RE =
-  /^(?:[12]º\s*Grupo|3º\s*Grupo|Vencedor\s+(?:oitavas|quartas|semi)|Perdedor\s+semi)\b/i;
+  /^(?:[12]º\s*Grupo|3º\s*Grupo|Vencedor\s+(?:16avos|oitavas|quartas|semi)|Perdedor\s+semi)\b/i;
+
+const CONFRONTOS_DEFINIDOS: Record<string, { time: string; bandeira: string | null }> = {
+  "Alemanha|3º Grupo A/B/C/D/F": { time: "Paraguai", bandeira: codigo("Paraguay") },
+  "França|3º Grupo C/D/F/G/H": { time: "Suécia", bandeira: codigo("Sweden") },
+};
 
 function isPlaceholder(t: string): boolean {
   return PLACEHOLDER_RE.test(t);
@@ -402,6 +409,7 @@ async function resolverChaveamento(supabase: any): Promise<number> {
     top[g] = tabela;
   }
 
+  const dezesseisAvos = all.filter((j) => /16\s*avos|16-?avos/i.test(j.fase ?? ""));
   const oitavas = all.filter((j) => /oitava/i.test(j.fase ?? ""));
   const quartas = all.filter((j) => /quart/i.test(j.fase ?? ""));
   const semis = all.filter((j) => /semi/i.test(j.fase ?? ""));
@@ -436,6 +444,10 @@ async function resolverChaveamento(supabase: any): Promise<number> {
       const j = oitavas[Number(m[1]) - 1];
       if (j) return winnerOf(j);
     }
+    if ((m = nome.match(/^Vencedor\s+16avos\s+(\d+)$/i))) {
+      const j = dezesseisAvos[Number(m[1]) - 1];
+      if (j) return winnerOf(j);
+    }
     if ((m = nome.match(/^Vencedor\s+quartas\s+(\d+)$/i))) {
       const j = quartas[Number(m[1]) - 1];
       if (j) return winnerOf(j);
@@ -452,21 +464,21 @@ async function resolverChaveamento(supabase: any): Promise<number> {
   };
 
   let total = 0;
-  // várias passadas para propagar (grupos → oitavas → quartas → semi → final/3º)
+  // várias passadas para propagar (grupos → 16avos → oitavas → quartas → semi → final/3º)
   for (let pass = 0; pass < 5; pass++) {
     let changed = false;
     for (const j of all) {
       if (!j.fase) continue;
       const patch: Record<string, unknown> = {};
       if (isPlaceholder(j.time_mandante)) {
-        const r = resolveSlot(j.time_mandante);
+        const r = CONFRONTOS_DEFINIDOS[`${j.time_visitante}|${j.time_mandante}`] ?? resolveSlot(j.time_mandante);
         if (r && r.time && r.time !== j.time_mandante) {
           patch.time_mandante = r.time;
           patch.bandeira_mandante = r.bandeira ?? codigo(r.time);
         }
       }
       if (isPlaceholder(j.time_visitante)) {
-        const r = resolveSlot(j.time_visitante);
+        const r = CONFRONTOS_DEFINIDOS[`${j.time_mandante}|${j.time_visitante}`] ?? resolveSlot(j.time_visitante);
         if (r && r.time && r.time !== j.time_visitante) {
           patch.time_visitante = r.time;
           patch.bandeira_visitante = r.bandeira ?? codigo(r.time);
