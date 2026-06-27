@@ -270,11 +270,13 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       const exist = porData ?? byTimes.get(`${mandante}|${visitante}`);
 
       if (exist) {
+        const fase = mapFase(e.intRound, dataHora);
         const patch: Record<string, unknown> = {
           status,
           placar_mandante: placarM,
           placar_visitante: placarV,
         };
+        if (fase) patch.fase = fase;
         if (!porData) patch.data_hora = dataHora;
         const { error } = await supabase
           .from("jogos")
