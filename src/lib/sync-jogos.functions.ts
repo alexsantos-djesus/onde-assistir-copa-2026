@@ -345,7 +345,7 @@ function isPlaceholder(t: string): boolean {
   return PLACEHOLDER_RE.test(t);
 }
 
-type SupabaseClientLike = ReturnType<typeof createClient>;
+// supabase typed loosely para evitar conflito de generics do client
 
 async function resolverChaveamento(supabase: any): Promise<number> {
   const { data } = await supabase
