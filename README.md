@@ -17,7 +17,7 @@
 
 | Feature | Descrição |
 |--------|-----------|
-| 📅 **Agenda de jogos** | Filtros por data (hoje, amanhã, semana), status (ao vivo, agendado, encerrado) e fase (grupos, oitavas, quartas, semi, final). |
+| 📅 **Agenda de jogos** | Filtros por data (hoje, amanhã, semana), status (ao vivo, agendado, encerrado) e fase (grupos, 16avos, oitavas, quartas, semi, final). |
 | 🔴 **Placar ao vivo** | Sincronização automática com [TheSportsDB](https://www.thesportsdb.com) + fallback inteligente que marca jogos como "ao vivo" quando o horário inicia. |
 | 🏟️ **Tabela de grupos** | Classificação automática com critérios FIFA: pontos, saldo de gols, gols pró, confronto direto e menos gols sofridos. |
 | 🏆 **Mata-mata interativo** | Chaveamento visual com drag-to-scroll horizontal, otimizado para mobile. |
