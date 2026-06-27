@@ -314,6 +314,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       total: events.length,
       inseridos,
       atualizados,
+      resolvidos,
       erros: erros.slice(0, 5),
       timestamp: new Date().toISOString(),
     };
