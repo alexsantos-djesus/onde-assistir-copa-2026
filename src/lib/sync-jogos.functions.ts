@@ -321,6 +321,9 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
     lastSyncAt = Date.now();
     return result;
   },
+);
+
+
 
 type JogoLite = {
   id: string;
