@@ -300,6 +300,15 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       }
     }
 
+    // Resolve chaveamento: substitui placeholders ("1º Grupo A", "Vencedor oitavas 3", etc)
+    // pelos times reais quando já é possível determinar.
+    let resolvidos = 0;
+    try {
+      resolvidos = await resolverChaveamento(supabase);
+    } catch {
+      // não bloqueia o sync se falhar
+    }
+
     const result = {
       ok: erros.length === 0,
       total: events.length,
