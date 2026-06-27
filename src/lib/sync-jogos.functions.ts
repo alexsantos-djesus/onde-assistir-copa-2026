@@ -136,9 +136,9 @@ function mapFase(round: string | null, dataHora?: string | null): string | null 
   if (!round) return null;
   const n = Number(round);
   if (!Number.isFinite(n)) return round;
-  const isMataMata = dataHora ? new Date(dataHora).getTime() >= Date.UTC(2026, 5, 28) : false;
+  const isMataMataFinal = dataHora ? new Date(dataHora).getTime() >= Date.UTC(2026, 6, 8) : false;
   // No formato 2026: 32 classificados começam em 16avos; depois oitavas, quartas, semi e final.
-  if (!isMataMata && n >= 1 && n <= 3) return `Fase de Grupos - Rodada ${n}`;
+  if (!isMataMataFinal && n >= 1 && n <= 3) return `Fase de Grupos - Rodada ${n}`;
   if (n === 16 || n === 125) return "16avos de Final";
   if (n === 8 || n === 150) return "Oitavas de Final";
   if (n === 4 || n === 180) return "Quartas de Final";
