@@ -411,6 +411,20 @@ async function resolverChaveamento(supabase: any): Promise<number> {
     top[g] = tabela;
   }
 
+  // Ranking dos melhores 3º colocados (regra Copa 2026: 8 entre 12 avançam).
+  // Critérios: pontos, saldo, gols pró, depois ordem alfabética (fair-play/sorteio não disponíveis).
+  const terceiros: Array<Linha & { grupo: string }> = [];
+  for (const [g, tabela] of Object.entries(top)) {
+    if (tabela[2]) terceiros.push({ ...tabela[2], grupo: g });
+  }
+  terceiros.sort(
+    (x, y) =>
+      y.pts - x.pts || y.sg - x.sg || y.gp - x.gp || x.time.localeCompare(y.time),
+  );
+  const terceirosClassificados =
+    Object.keys(top).length >= 12 ? terceiros.slice(0, 8) : [];
+  const usados3 = new Set<string>();
+
   const dezesseisAvos = all.filter((j) => /16\s*avos|16-?avos/i.test(j.fase ?? ""));
   const oitavas = all.filter((j) => /oitava/i.test(j.fase ?? ""));
   const quartas = all.filter((j) => /quart/i.test(j.fase ?? ""));
@@ -440,6 +454,17 @@ async function resolverChaveamento(supabase: any): Promise<number> {
       if (t && t[Number(m[1]) - 1]) {
         const l = t[Number(m[1]) - 1];
         return { time: l.time, bandeira: l.bandeira };
+      }
+    }
+    // "3º Grupo X/Y/Z/..." — escolhe o melhor 3º colocado dentre os grupos listados
+    if ((m = nome.match(/^3º\s*Grupo\s*([A-L](?:\s*\/\s*[A-L])+)$/i))) {
+      if (terceirosClassificados.length === 0) return null;
+      const gruposAllow = m[1].split("/").map((s) => s.trim().toUpperCase());
+      for (const t of terceirosClassificados) {
+        if (!gruposAllow.includes(t.grupo)) continue;
+        if (usados3.has(t.grupo)) continue;
+        usados3.add(t.grupo);
+        return { time: t.time, bandeira: t.bandeira };
       }
     }
     if ((m = nome.match(/^Vencedor\s+oitavas\s+(\d+)$/i))) {
