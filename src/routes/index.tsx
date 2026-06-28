@@ -184,7 +184,9 @@ function HomePage() {
         .select("*")
         .order("data_hora", { ascending: true });
       if (error) throw error;
-      return ((data ?? []) as Jogo[]).map(comStatusEfetivo);
+      return ((data ?? []) as Jogo[])
+        .filter((j) => j.status !== "oculto" && j.fase !== "Duplicado")
+        .map(comStatusEfetivo);
     },
     refetchInterval: 30_000,
     refetchIntervalInBackground: true,
