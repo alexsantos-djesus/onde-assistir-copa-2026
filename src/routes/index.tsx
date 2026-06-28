@@ -476,6 +476,30 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
     }
   }
 
+  // Swipe entre fases disponíveis
+  const fasesDisp = porFase.filter((f) => f.jogos.length > 0);
+  const idxAtual = fasesDisp.findIndex((f) => f.key === faseAtual);
+  const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
+  const irPara = (novoIdx: number, dir: "left" | "right") => {
+    if (novoIdx < 0 || novoIdx >= fasesDisp.length) return;
+    setSlideDir(dir);
+    setFaseAtual(fasesDisp[novoIdx].key);
+    setTimeout(() => setSlideDir(null), 300);
+  };
+  const touchRef = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touchRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchRef.current.y;
+    touchRef.current = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) irPara(idxAtual + 1, "left");
+    else irPara(idxAtual - 1, "right");
+  };
+
   return (
     <div className="space-y-4">
       {/* Sub-abas das fases */}
