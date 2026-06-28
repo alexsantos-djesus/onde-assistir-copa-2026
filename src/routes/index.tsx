@@ -255,7 +255,7 @@ function HomePage() {
                 aba === a ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               }`}
             >
-              {a === "jogos" ? "Jogos" : a === "grupos" ? "Grupos" : "Fase eliminatória"}
+              {a === "jogos" ? "Jogos" : a === "grupos" ? "Grupos" : "Mata-mata"}
             </button>
           ))}
         </div>
