@@ -534,36 +534,53 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
         {ativo.label}
       </h3>
 
-      {ehFinal ? (
-        <div className="flex flex-col gap-4 items-center">
-          {finais.length > 0 && (
-            <div className="w-full max-w-md">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-center mb-2 text-accent">
-                🏆 Final
-              </div>
-              {finais.map((j) => (
-                <BracketCard key={j.id} jogo={j} destaque />
-              ))}
+      <div
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{ touchAction: "pan-y" }}
+      >
+        <div
+          key={faseAtual}
+          className={
+            slideDir === "left"
+              ? "animate-[slideInRight_0.3s_ease-out]"
+              : slideDir === "right"
+                ? "animate-[slideInLeft_0.3s_ease-out]"
+                : ""
+          }
+        >
+          {ehFinal ? (
+            <div className="flex flex-col gap-4 items-center">
+              {finais.length > 0 && (
+                <div className="w-full max-w-md">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-center mb-2 text-accent">
+                    🏆 Final
+                  </div>
+                  {finais.map((j) => (
+                    <BracketCard key={j.id} jogo={j} destaque />
+                  ))}
+                </div>
+              )}
+              {terceiros.length > 0 && (
+                <div className="w-full max-w-md opacity-90">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-center mb-2 text-muted-foreground">
+                    3º Lugar
+                  </div>
+                  {terceiros.map((j) => (
+                    <BracketCard key={j.id} jogo={j} />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-          {terceiros.length > 0 && (
-            <div className="w-full max-w-md opacity-90">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-center mb-2 text-muted-foreground">
-                3º Lugar
-              </div>
-              {terceiros.map((j) => (
-                <BracketCard key={j.id} jogo={j} />
+          ) : (
+            <div className="flex flex-col gap-5">
+              {pares.map((par, i) => (
+                <ParBracket key={i} jogos={par} />
               ))}
             </div>
           )}
         </div>
-      ) : (
-        <div className="flex flex-col gap-5">
-          {pares.map((par, i) => (
-            <ParBracket key={i} jogos={par} />
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
