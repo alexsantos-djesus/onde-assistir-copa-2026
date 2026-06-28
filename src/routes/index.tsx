@@ -440,12 +440,20 @@ const FASES_ELIM: FaseDef[] = [
 ];
 
 function MataMata({ jogos }: { jogos: Jogo[] }) {
-  const filtrarFase = (m: (f: string) => boolean) =>
+  const filtrarFase = (faseKey: string, m: (f: string) => boolean) => {
+    const unicos = new Map<string, Jogo>();
     jogos
       .filter((j) => j.fase && m(j.fase))
-      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime())
+      .forEach((j) => {
+        const key = `${j.time_mandante}|${j.time_visitante}|${j.data_hora.slice(0, 10)}`;
+        if (!unicos.has(key)) unicos.set(key, j);
+      });
+    const lista = [...unicos.values()];
+    return faseKey === "dezesseis" ? lista.slice(0, 16) : lista;
+  };
 
-  const porFase = FASES_ELIM.map((fase) => ({ ...fase, jogos: filtrarFase(fase.match) }));
+  const porFase = FASES_ELIM.map((fase) => ({ ...fase, jogos: filtrarFase(fase.key, fase.match) }));
   const temAlgum = porFase.some((f) => f.jogos.length > 0);
 
   // primeira fase com jogos é o padrão
