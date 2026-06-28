@@ -476,6 +476,30 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
     }
   }
 
+  // Swipe entre fases disponíveis
+  const fasesDisp = porFase.filter((f) => f.jogos.length > 0);
+  const idxAtual = fasesDisp.findIndex((f) => f.key === faseAtual);
+  const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
+  const irPara = (novoIdx: number, dir: "left" | "right") => {
+    if (novoIdx < 0 || novoIdx >= fasesDisp.length) return;
+    setSlideDir(dir);
+    setFaseAtual(fasesDisp[novoIdx].key);
+    setTimeout(() => setSlideDir(null), 300);
+  };
+  const touchRef = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touchRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchRef.current.y;
+    touchRef.current = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) irPara(idxAtual + 1, "left");
+    else irPara(idxAtual - 1, "right");
+  };
+
   return (
     <div className="space-y-4">
       {/* Sub-abas das fases */}
@@ -510,36 +534,53 @@ function MataMata({ jogos }: { jogos: Jogo[] }) {
         {ativo.label}
       </h3>
 
-      {ehFinal ? (
-        <div className="flex flex-col gap-4 items-center">
-          {finais.length > 0 && (
-            <div className="w-full max-w-md">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-center mb-2 text-accent">
-                🏆 Final
-              </div>
-              {finais.map((j) => (
-                <BracketCard key={j.id} jogo={j} destaque />
-              ))}
+      <div
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{ touchAction: "pan-y" }}
+      >
+        <div
+          key={faseAtual}
+          className={
+            slideDir === "left"
+              ? "animate-[slideInRight_0.3s_ease-out]"
+              : slideDir === "right"
+                ? "animate-[slideInLeft_0.3s_ease-out]"
+                : ""
+          }
+        >
+          {ehFinal ? (
+            <div className="flex flex-col gap-4 items-center">
+              {finais.length > 0 && (
+                <div className="w-full max-w-md">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-center mb-2 text-accent">
+                    🏆 Final
+                  </div>
+                  {finais.map((j) => (
+                    <BracketCard key={j.id} jogo={j} destaque />
+                  ))}
+                </div>
+              )}
+              {terceiros.length > 0 && (
+                <div className="w-full max-w-md opacity-90">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-center mb-2 text-muted-foreground">
+                    3º Lugar
+                  </div>
+                  {terceiros.map((j) => (
+                    <BracketCard key={j.id} jogo={j} />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-          {terceiros.length > 0 && (
-            <div className="w-full max-w-md opacity-90">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-center mb-2 text-muted-foreground">
-                3º Lugar
-              </div>
-              {terceiros.map((j) => (
-                <BracketCard key={j.id} jogo={j} />
+          ) : (
+            <div className="flex flex-col gap-5">
+              {pares.map((par, i) => (
+                <ParBracket key={i} jogos={par} />
               ))}
             </div>
           )}
         </div>
-      ) : (
-        <div className="flex flex-col gap-5">
-          {pares.map((par, i) => (
-            <ParBracket key={i} jogos={par} />
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
