@@ -307,6 +307,8 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       }
     }
 
+    const duplicadosOcultos = await deduplicarJogos(supabase);
+
     // Resolve chaveamento: substitui placeholders ("1º Grupo A", "Vencedor 16avos 3", etc)
     // pelos times reais quando já é possível determinar.
     let resolvidos = 0;
@@ -321,6 +323,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       total: events.length,
       inseridos,
       atualizados,
+      duplicadosOcultos,
       resolvidos,
       erros: erros.slice(0, 5),
       timestamp: new Date().toISOString(),
@@ -355,6 +358,48 @@ const CONFRONTOS_DEFINIDOS: Record<string, { time: string; bandeira: string | nu
 
 function isPlaceholder(t: string): boolean {
   return PLACEHOLDER_RE.test(t);
+}
+
+async function deduplicarJogos(supabase: any): Promise<number> {
+  const { data } = await supabase
+    .from("jogos")
+    .select("id, fase, data_hora, status, time_mandante, time_visitante, placar_mandante, placar_visitante")
+    .neq("status", "oculto")
+    .neq("fase", "Duplicado")
+    .order("data_hora", { ascending: true });
+  const jogos = (data ?? []) as JogoLite[];
+  const grupos = new Map<string, JogoLite[]>();
+
+  for (const j of jogos) {
+    const dia = (j.data_hora ?? "").slice(0, 10);
+    if (!dia) continue;
+    const key = `${j.time_mandante}|${j.time_visitante}|${dia}`;
+    const arr = grupos.get(key) ?? [];
+    arr.push(j);
+    grupos.set(key, arr);
+  }
+
+  let total = 0;
+  for (const arr of grupos.values()) {
+    if (arr.length < 2) continue;
+    arr.sort((a, b) => {
+      const scoreA = (a.placar_mandante != null && a.placar_visitante != null ? 4 : 0) +
+        ((a.fase ?? "") === "16avos de Final" ? 2 : 0) +
+        (a.status === "encerrado" ? 1 : 0);
+      const scoreB = (b.placar_mandante != null && b.placar_visitante != null ? 4 : 0) +
+        ((b.fase ?? "") === "16avos de Final" ? 2 : 0) +
+        (b.status === "encerrado" ? 1 : 0);
+      return scoreB - scoreA || new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime();
+    });
+    const duplicados = arr.slice(1).map((j) => j.id);
+    if (duplicados.length === 0) continue;
+    const { error } = await supabase
+      .from("jogos")
+      .update({ fase: "Duplicado", status: "oculto" })
+      .in("id", duplicados);
+    if (!error) total += duplicados.length;
+  }
+  return total;
 }
 
 // supabase typed loosely para evitar conflito de generics do client
