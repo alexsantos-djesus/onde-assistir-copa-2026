@@ -36,6 +36,8 @@ type ExistingGame = {
   time_mandante: string;
   time_visitante: string;
   data_hora: string | null;
+  fase: string | null;
+  status: string | null;
   placar_mandante: number | null;
   placar_visitante: number | null;
 };
@@ -140,6 +142,7 @@ function mapFase(round: string | null, dataHora?: string | null): string | null 
   // No formato 2026: 32 classificados começam em 16avos; depois oitavas, quartas, semi e final.
   if (!isMataMataFinal && n >= 1 && n <= 3) return `Fase de Grupos - Rodada ${n}`;
   if (n === 16 || n === 125) return "16avos de Final";
+  if (n === 32) return "16avos de Final";
   if (n === 8 || n === 150) return "Oitavas de Final";
   if (n === 4 || n === 180) return "Quartas de Final";
   if (n === 2) return "Semifinal";
@@ -196,7 +199,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
     // Busca jogos existentes (todos) para deduplicar
     const { data: existentes, error: errSel } = await supabase
       .from("jogos")
-      .select("id, time_mandante, time_visitante, data_hora, placar_mandante, placar_visitante");
+      .select("id, time_mandante, time_visitante, data_hora, fase, status, placar_mandante, placar_visitante");
     if (errSel) throw errSel;
 
     const existingGames = (existentes ?? []) as ExistingGame[];
@@ -230,7 +233,7 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
 
     const byKey = new Map<string, { id: string; pm: number | null; pv: number | null }>();
     const byTimes = new Map<string, { id: string; pm: number | null; pv: number | null }>();
-    for (const j of existingGames) {
+    for (const j of existingGames.filter((g) => g.status !== "oculto" && g.fase !== "Duplicado")) {
       const k = `${j.time_mandante}|${j.time_visitante}|${(j.data_hora ?? "").slice(0, 10)}`;
       const v = { id: j.id, pm: j.placar_mandante, pv: j.placar_visitante };
       byKey.set(k, v);
