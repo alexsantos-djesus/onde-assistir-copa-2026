@@ -254,16 +254,6 @@ export const syncJogosFromSportsDB = createServerFn({ method: "POST" }).handler(
       const placarM = e.intHomeScore != null ? Number(e.intHomeScore) : null;
       const placarV = e.intAwayScore != null ? Number(e.intAwayScore) : null;
 
-      // Fallback: TheSportsDB às vezes demora a marcar como LIVE.
-      // Se o jogo já começou (até 3h após o horário) e não foi encerrado/adiado, marca ao vivo.
-      if (status === "agendado") {
-        const inicio = new Date(dataHora).getTime();
-        const agora = Date.now();
-        if (agora >= inicio && agora < inicio + 1000 * 60 * 60 * 3) {
-          status = "ao_vivo";
-        }
-      }
-
       const mandante = nomePT(e.strHomeTeam);
       const visitante = nomePT(e.strAwayTeam);
 
