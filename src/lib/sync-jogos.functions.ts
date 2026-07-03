@@ -346,8 +346,39 @@ const CONFRONTOS_DEFINIDOS: Record<string, { time: string; bandeira: string | nu
   "França|3º Grupo C/D/F/G/H": { time: "Suécia", bandeira: codigo("Sweden") },
 };
 
+const VENCEDORES_PENALTIS: Record<string, string> = {
+  "Alemanha|Paraguai": "Paraguai",
+  "Holanda|Marrocos": "Marrocos",
+};
+
+const ORDEM_16AVOS = [
+  "Alemanha|Paraguai",
+  "França|Suécia",
+  "África do Sul|Canadá",
+  "Holanda|Marrocos",
+  "Portugal|Croácia",
+  "Espanha|Áustria",
+  "EUA|Bósnia e Herzegovina",
+  "Bélgica|Senegal",
+  "Brasil|Japão",
+  "Costa do Marfim|Noruega",
+  "México|Equador",
+  "Inglaterra|RD Congo",
+  "Argentina|Cabo Verde",
+  "Austrália|Egito",
+  "Suíça|Argélia",
+  "Colômbia|Gana",
+];
+
 function isPlaceholder(t: string): boolean {
   return PLACEHOLDER_RE.test(t);
+}
+
+function ordemConfronto16avos(j: JogoLite): number {
+  const direto = `${j.time_mandante}|${j.time_visitante}`;
+  const inverso = `${j.time_visitante}|${j.time_mandante}`;
+  const idx = ORDEM_16AVOS.findIndex((k) => k === direto || k === inverso);
+  return idx === -1 ? 999 : idx;
 }
 
 async function deduplicarJogos(supabase: any): Promise<number> {
@@ -465,7 +496,9 @@ async function resolverChaveamento(supabase: any): Promise<number> {
     Object.keys(top).length >= 12 ? terceiros.slice(0, 8) : [];
   const usados3 = new Set<string>();
 
-  const dezesseisAvos = all.filter((j) => /16\s*avos|16-?avos/i.test(j.fase ?? ""));
+  const dezesseisAvos = all
+    .filter((j) => /16\s*avos|16-?avos/i.test(j.fase ?? ""))
+    .sort((a, b) => ordemConfronto16avos(a) - ordemConfronto16avos(b) || new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
   const oitavas = all.filter((j) => /oitava/i.test(j.fase ?? ""));
   const quartas = all.filter((j) => /quart/i.test(j.fase ?? ""));
   const semis = all.filter((j) => /semi/i.test(j.fase ?? ""));
@@ -475,6 +508,13 @@ async function resolverChaveamento(supabase: any): Promise<number> {
     if (j.placar_mandante > j.placar_visitante)
       return { time: j.time_mandante, bandeira: j.bandeira_mandante };
     if (j.placar_mandante < j.placar_visitante)
+      return { time: j.time_visitante, bandeira: j.bandeira_visitante };
+    const vencedorPenaltis =
+      VENCEDORES_PENALTIS[`${j.time_mandante}|${j.time_visitante}`] ??
+      VENCEDORES_PENALTIS[`${j.time_visitante}|${j.time_mandante}`];
+    if (vencedorPenaltis === j.time_mandante)
+      return { time: j.time_mandante, bandeira: j.bandeira_mandante };
+    if (vencedorPenaltis === j.time_visitante)
       return { time: j.time_visitante, bandeira: j.bandeira_visitante };
     return null;
   };
