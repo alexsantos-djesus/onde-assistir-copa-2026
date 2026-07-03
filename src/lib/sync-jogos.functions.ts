@@ -401,7 +401,9 @@ async function resolverChaveamento(supabase: any): Promise<number> {
       "id, fase, data_hora, status, time_mandante, time_visitante, bandeira_mandante, bandeira_visitante, placar_mandante, placar_visitante",
     )
     .order("data_hora", { ascending: true });
-  const all = (data ?? []) as JogoLite[];
+  const all = ((data ?? []) as JogoLite[]).filter(
+    (j) => j.status !== "oculto" && j.fase !== "Duplicado",
+  );
   if (all.length === 0) return 0;
 
   // Top 1/2 por grupo (quando todos os 6 jogos do grupo estão encerrados)
@@ -560,6 +562,86 @@ async function resolverChaveamento(supabase: any): Promise<number> {
     }
     if (!changed) break;
   }
+
+  const slot = (faseNome: "16avos" | "oitavas" | "quartas" | "semi", idx: number) => {
+    const listas = {
+      "16avos": dezesseisAvos,
+      oitavas,
+      quartas,
+      semi: semis,
+    };
+    const nomes = {
+      "16avos": "16avos",
+      oitavas: "oitavas",
+      quartas: "quartas",
+      semi: "semi",
+    };
+    const jogo = listas[faseNome][idx - 1];
+    const vencedor = jogo ? winnerOf(jogo) : null;
+    return vencedor ?? { time: `Vencedor ${nomes[faseNome]} ${idx}`, bandeira: null };
+  };
+
+  const aplicarSlots = async (
+    jogos: JogoLite[],
+    fontes: Array<[{ time: string; bandeira: string | null }, { time: string; bandeira: string | null }]>,
+  ) => {
+    for (let i = 0; i < jogos.length && i < fontes.length; i++) {
+      const j = jogos[i];
+      if (j.status === "encerrado") continue;
+      const [mandante, visitante] = fontes[i];
+      const patch: Record<string, unknown> = {};
+
+      if (j.time_mandante !== mandante.time) {
+        patch.time_mandante = mandante.time;
+        patch.bandeira_mandante = mandante.bandeira ?? codigo(mandante.time);
+      }
+      if (j.time_visitante !== visitante.time) {
+        patch.time_visitante = visitante.time;
+        patch.bandeira_visitante = visitante.bandeira ?? codigo(visitante.time);
+      }
+
+      if (Object.keys(patch).length > 0) {
+        const { error } = await supabase.from("jogos").update(patch).eq("id", j.id);
+        if (!error) {
+          Object.assign(j, patch);
+          total++;
+        }
+      }
+    }
+  };
+
+  // Mantém a fase eliminatória em chaveamento limpo: cada vencedor ocupa só a própria vaga.
+  // Isso corrige times duplicados em fases seguintes quando algum confronto foi editado manualmente.
+  await aplicarSlots(oitavas, [
+    [slot("16avos", 1), slot("16avos", 2)],
+    [slot("16avos", 3), slot("16avos", 4)],
+    [slot("16avos", 5), slot("16avos", 6)],
+    [slot("16avos", 7), slot("16avos", 8)],
+    [slot("16avos", 9), slot("16avos", 10)],
+    [slot("16avos", 11), slot("16avos", 12)],
+    [slot("16avos", 13), slot("16avos", 14)],
+    [slot("16avos", 15), slot("16avos", 16)],
+  ]);
+
+  await aplicarSlots(quartas, [
+    [slot("oitavas", 1), slot("oitavas", 2)],
+    [slot("oitavas", 3), slot("oitavas", 4)],
+    [slot("oitavas", 5), slot("oitavas", 6)],
+    [slot("oitavas", 7), slot("oitavas", 8)],
+  ]);
+
+  await aplicarSlots(semis, [
+    [slot("quartas", 1), slot("quartas", 2)],
+    [slot("quartas", 3), slot("quartas", 4)],
+  ]);
+
+  const finais = all.filter((j) => (j.fase ?? "") === "Final");
+  const terceirosLugar = all.filter((j) => /3º|terceiro|terceira/i.test(j.fase ?? ""));
+  await aplicarSlots(finais, [[slot("semi", 1), slot("semi", 2)]]);
+  await aplicarSlots(terceirosLugar, [
+    [loserOf(semis[0]) ?? { time: "Perdedor semi 1", bandeira: null }, loserOf(semis[1]) ?? { time: "Perdedor semi 2", bandeira: null }],
+  ]);
+
   return total;
 }
 
